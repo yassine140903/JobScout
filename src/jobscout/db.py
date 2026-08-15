@@ -80,6 +80,43 @@ CREATE INDEX IF NOT EXISTS idx_matches_score       ON matches(score DESC);
 CREATE INDEX IF NOT EXISTS idx_runs_status         ON runs(status);
 """
 
+# Add this constant after SCHEMA_SQL
+
+# M2: Add profile columns for CV ingestion
+MIGRATE_M2_SQL = """
+ALTER TABLE profiles ADD COLUMN raw_text         TEXT;
+ALTER TABLE profiles ADD COLUMN skills           TEXT DEFAULT '[]';
+ALTER TABLE profiles ADD COLUMN domains          TEXT DEFAULT '[]';
+ALTER TABLE profiles ADD COLUMN seniority        TEXT;
+ALTER TABLE profiles ADD COLUMN languages        TEXT DEFAULT '[]';
+ALTER TABLE profiles ADD COLUMN target_locations  TEXT DEFAULT '["Europe"]';
+ALTER TABLE profiles ADD COLUMN company_types    TEXT DEFAULT '[]';
+ALTER TABLE profiles ADD COLUMN position_types   TEXT DEFAULT '[]';
+"""
+
+
+def migrate_m2(conn: sqlite3.Connection) -> None:
+    """Add M2 columns to profiles. Safe to call on already-migrated DBs."""
+    existing = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(profiles)").fetchall()
+    }
+    m2_columns = [
+        "raw_text", "skills", "domains", "seniority",
+        "languages", "target_locations", "company_types", "position_types",
+    ]
+    if all(col in existing for col in m2_columns):
+        return  # already migrated
+
+    for statement in MIGRATE_M2_SQL.strip().split(";"):
+        statement = statement.strip()
+        if not statement or statement.startswith("--"):
+            continue
+        col_name = statement.split("ADD COLUMN")[1].strip().split()[0]
+        if col_name not in existing:
+            conn.execute(statement)
+    conn.commit()
+
 
 def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     """Return a connection with sensible defaults (WAL, foreign keys, row factory)."""
@@ -147,3 +184,55 @@ def table_counts(conn: sqlite3.Connection) -> dict[str, int]:
         t: conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]  # noqa: S608
         for t in tables
     }
+
+def upsert_profile(conn: sqlite3.Connection, profile: dict[str, Any]) -> int:
+    """Insert or update a profile by name. Returns the profile id."""
+    import json
+
+    sql = """
+        INSERT INTO profiles (name, raw_text, skills, domains, seniority,
+                              languages, target_locations, company_types,
+                              position_types, updated_at)
+        VALUES (:name, :raw_text, :skills, :domains, :seniority,
+                :languages, :target_locations, :company_types,
+                :position_types, datetime('now'))
+        ON CONFLICT(name) DO UPDATE SET
+            raw_text = excluded.raw_text,
+            skills = excluded.skills,
+            domains = excluded.domains,
+            seniority = excluded.seniority,
+            languages = excluded.languages,
+            target_locations = excluded.target_locations,
+            company_types = excluded.company_types,
+            position_types = excluded.position_types,
+            updated_at = datetime('now')
+    """
+    # Serialize lists to JSON strings
+    params = dict(profile)
+    for key in ("skills", "domains", "languages", "target_locations",
+                "company_types", "position_types"):
+        if isinstance(params.get(key), list):
+            params[key] = json.dumps(params[key])
+
+    cur = conn.execute(sql, params)
+    conn.commit()
+
+    # Return the profile id
+    row = conn.execute(
+        "SELECT id FROM profiles WHERE name = ?", (params["name"],)
+    ).fetchone()
+    return row[0]
+
+
+def get_profile(conn: sqlite3.Connection, name: str) -> sqlite3.Row | None:
+    """Return a profile by name."""
+    return conn.execute(
+        "SELECT * FROM profiles WHERE name = ?", (name,)
+    ).fetchone()
+
+
+def get_all_profiles(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Return all profiles."""
+    return conn.execute(
+        "SELECT * FROM profiles ORDER BY created_at DESC"
+    ).fetchall()
