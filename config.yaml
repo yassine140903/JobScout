@@ -1,0 +1,15 @@
+# JobScout configuration
+
+db_path: jobscout.db
+
+model:
+  name: intfloat/multilingual-e5-base
+
+scoring:
+  weights:
+    skills: 0.35
+    domain: 0.30
+    seniority: 0.20
+    location: 0.15
+
+sources: []  
