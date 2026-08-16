@@ -118,6 +118,31 @@ def migrate_m2(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+# M3: Add embedding columns to profiles and job extraction columns to jobs
+MIGRATE_M3_SQL = """
+ALTER TABLE profiles ADD COLUMN skills_embedding BLOB;
+ALTER TABLE profiles ADD COLUMN domain_embedding BLOB;
+ALTER TABLE jobs ADD COLUMN skills           TEXT DEFAULT '[]';
+ALTER TABLE jobs ADD COLUMN domains          TEXT DEFAULT '[]';
+ALTER TABLE jobs ADD COLUMN skills_embedding  BLOB;
+ALTER TABLE jobs ADD COLUMN domain_embedding  BLOB;
+"""
+
+
+def migrate_m3(conn: sqlite3.Connection) -> None:
+    """Add M3 columns (embeddings + job extraction). Idempotent."""
+    for statement in MIGRATE_M3_SQL.strip().split(";"):
+        statement = statement.strip()
+        if not statement:
+            continue
+        try:
+            conn.execute(statement)
+        except sqlite3.OperationalError as e:
+            if "duplicate column" not in str(e).lower():
+                raise
+    conn.commit()
+
+
 def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     """Return a connection with sensible defaults (WAL, foreign keys, row factory)."""
     conn = sqlite3.connect(str(db_path))

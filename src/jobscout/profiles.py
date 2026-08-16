@@ -183,12 +183,18 @@ class RuleBasedExtractor(Extractor):
     """Extract profile facets via keyword matching and regex heuristics."""
 
     def extract(self, raw_text: str) -> dict[str, Any]:
+        result = self.extract_from_text(raw_text)
+        text_lower = raw_text.lower()
+        result["languages"] = self._extract_languages(text_lower)
+        return result
+
+    def extract_from_text(self, raw_text: str) -> dict[str, Any]:
+        """Extract skills/domains/seniority from any text (CV, job description, etc.)."""
         text_lower = raw_text.lower()
         return {
             "skills": self._extract_skills(text_lower, raw_text),
             "domains": self._extract_domains(text_lower),
             "seniority": self._extract_seniority(text_lower),
-            "languages": self._extract_languages(text_lower),
         }
 
     def _extract_skills(self, text_lower: str, text_original: str) -> list[str]:
