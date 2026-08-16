@@ -142,6 +142,21 @@ def migrate_m3(conn: sqlite3.Connection) -> None:
                 raise
     conn.commit()
 
+def migrate_m4(conn: sqlite3.Connection) -> None:
+    """Add M4 columns for cross-source dedup."""
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+    if "dedup_hash" not in existing:
+        conn.execute("ALTER TABLE jobs ADD COLUMN dedup_hash TEXT")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_dedup_hash ON jobs(dedup_hash)")
+        conn.commit()
+
+
+def find_by_dedup_hash(conn: sqlite3.Connection, dedup_hash: str) -> sqlite3.Row | None:
+    """Return the first job matching this dedup hash, or None."""
+    return conn.execute(
+        "SELECT * FROM jobs WHERE dedup_hash = ?", (dedup_hash,)
+    ).fetchone()
+
 
 def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     """Return a connection with sensible defaults (WAL, foreign keys, row factory)."""

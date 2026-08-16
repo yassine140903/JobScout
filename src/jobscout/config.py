@@ -16,13 +16,39 @@ DEFAULTS: dict[str, Any] = {
     },
     "scoring": {
         "weights": {
-            "skills": 0.35,
+            "skills": 0.50,
             "domain": 0.30,
             "seniority": 0.20,
-            "location": 0.15,
         },
     },
-    "sources": [],
+    "sources": [
+        {
+            "name": "wttj",
+            "adapter": "wttj",
+            "enabled": True,
+            "keywords": [],
+            "max_pages": 5,
+        },
+        {
+            "name": "eures",
+            "adapter": "eures",
+            "enabled": True,
+            "keywords": [],
+            "locations": [],
+            "max_pages": 3,
+            "fetch_details": False,
+        },
+        {
+            "name": "euraxess",
+            "adapter": "euraxess",
+            "enabled": False,
+            "keyword": None,
+            "countries": [],
+            "research_fields": [],
+            "max_pages": 3,
+            "delay": 1.5,
+        },
+    ],
 }
 
 

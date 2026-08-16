@@ -165,9 +165,4 @@ browser with no CLI involvement.
 - Vector database
 - LinkedIn and Glassdoor scraping
 
----
 
-## 7. Working method
-
-Per milestone: discuss and surface tradeoffs → produce a scoped prompt for
-Claude Code → joint review of the resulting code. One milestone at a time.
