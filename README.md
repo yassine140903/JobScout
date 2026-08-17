@@ -153,4 +153,6 @@ uv run pytest tests/ -v
 
 ## License
 
-MIT
+MIT License
+
+Copyright (c) 2026 Yassine Ben JEMAA
