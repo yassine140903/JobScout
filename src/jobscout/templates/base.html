@@ -25,5 +25,39 @@
     <footer class="container">
         <small>JobScout — local-first job discovery</small>
     </footer>
+
+    <script>
+        // Inline job-detail expansion. Each job row is followed by a hidden
+        // .detail-row; clicking a row loads its detail into that row's cell.
+        window.jobscoutShouldLoad = false;   // read by the row's hx-trigger filter
+        window.jobscoutOpenId = null;        // job id the user last chose to open
+
+        function jobscoutCollapseAll() {
+            document.querySelectorAll('.detail-row.open').forEach(function (row) {
+                row.classList.remove('open');
+                row.firstElementChild.innerHTML = '';
+            });
+        }
+
+        // Runs before htmx evaluates the hx-trigger filter, so it decides
+        // whether the request fires at all.
+        function jobscoutToggleDetail(jobRow, jobId) {
+            var wasOpen = jobRow.nextElementSibling.classList.contains('open');
+            jobscoutCollapseAll();
+            // Clicking the open row just closes it; anything else opens fresh.
+            window.jobscoutShouldLoad = !wasOpen;
+            window.jobscoutOpenId = wasOpen ? null : jobId;
+        }
+
+        // Reveal only once content has landed, and only if this row is still
+        // the one the user wants open (guards against out-of-order responses).
+        function jobscoutRevealDetail(cell, jobId) {
+            if (window.jobscoutOpenId === jobId) {
+                cell.parentElement.classList.add('open');
+            } else {
+                cell.innerHTML = '';
+            }
+        }
+    </script>
 </body>
 </html>

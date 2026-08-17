@@ -43,9 +43,18 @@
     margin-bottom: 0.5em;
 }
 
-/* Job detail pane */
-#job-detail {
-    margin-top: 2em;
+/* Inline job detail row */
+.job-row {
+    cursor: pointer;
+}
+.detail-row {
+    display: none;
+}
+.detail-row.open {
+    display: table-row;
+}
+.detail-row td {
+    padding: 0;  /* the detail partial handles its own padding */
 }
 
 /* Progress bar */

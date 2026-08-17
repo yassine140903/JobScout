@@ -11,7 +11,7 @@ from pathlib import Path
 from jobscout.config import load_config
 from jobscout.db import (
     init_db, insert_jobs_bulk, table_counts,
-    migrate_m2, migrate_m3, migrate_m4, migrate_m5,
+    migrate_m2, migrate_m3, migrate_m4, migrate_m5, migrate_m6,
     upsert_profile, get_profile, get_all_profiles,
 )
 from jobscout.fixtures import get_fixtures
@@ -27,6 +27,7 @@ def _setup_db(config: dict):
     migrate_m3(conn)
     migrate_m4(conn)
     migrate_m5(conn)
+    migrate_m6(conn)
     return conn, db_path
 
 
@@ -137,7 +138,8 @@ def cmd_match(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     print(f"Matching profile '{args.profile}' against all jobs ...")
-    results = run_matching(conn, args.profile)
+    weights = config.get("scoring", {}).get("weights")
+    results = run_matching(conn, args.profile, weights=weights)
 
     if not results:
         print("No matches found (check location/language filters).")

@@ -10,7 +10,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from jobscout.db import (
-    init_db, migrate_m2, migrate_m3, migrate_m4, migrate_m5, find_by_dedup_hash,
+    init_db, migrate_m2, migrate_m3, migrate_m4, migrate_m5, migrate_m6,
+    find_by_dedup_hash,
 )
 from jobscout.sources import (
     RawPosting,
@@ -34,6 +35,7 @@ def db(tmp_path: Path) -> sqlite3.Connection:
     migrate_m3(conn)
     migrate_m4(conn)
     migrate_m5(conn)
+    migrate_m6(conn)
     return conn
 
 
@@ -557,3 +559,45 @@ class TestGenericRSSParsing:
         assert _resolve_nested(data, "author.name") == "Lab X"
         assert _resolve_nested(data, "author.email") is None
         assert _resolve_nested(data, "missing.field") is None
+
+# ---------------------------------------------------------------------------
+# Profile-driven config enrichment
+# ---------------------------------------------------------------------------
+
+def test_enrich_config_from_profile_fills_empty_keywords():
+    """enrich_config_from_profile injects profile skills/domains as keywords."""
+    from jobscout.sources import enrich_config_from_profile
+    config = {
+        "sources": [
+            {"name": "wttj", "adapter": "wttj", "enabled": True, "keywords": []},
+            {"name": "eures", "adapter": "eures", "enabled": True, "keywords": [], "locations": []},
+        ]
+    }
+    profile = {
+        "skills": json.dumps(["Python", "Docker", "TensorFlow"]),
+        "domains": json.dumps(["AI", "MLOps"]),
+        "target_locations": json.dumps(["Paris", "Berlin"]),
+    }
+    result = enrich_config_from_profile(config, profile)
+    assert result["sources"][0]["keywords"] == ["AI", "MLOps", "Python", "Docker", "TensorFlow"]
+    assert result["sources"][1]["keywords"] == ["AI", "MLOps", "Python", "Docker", "TensorFlow"]
+    assert result["sources"][1]["locations"] == []
+    # Original not mutated
+    assert config["sources"][0]["keywords"] == []
+
+
+def test_enrich_config_preserves_existing_keywords():
+    """enrich_config_from_profile does not overwrite user-configured keywords."""
+    from jobscout.sources import enrich_config_from_profile
+    config = {
+        "sources": [
+            {"name": "wttj", "adapter": "wttj", "enabled": True, "keywords": ["custom"]},
+        ]
+    }
+    profile = {
+        "skills": json.dumps(["Python"]),
+        "domains": json.dumps(["AI"]),
+        "target_locations": json.dumps([]),
+    }
+    result = enrich_config_from_profile(config, profile)
+    assert result["sources"][0]["keywords"] == ["custom"]

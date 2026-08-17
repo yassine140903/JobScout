@@ -9,5 +9,3 @@ scoring:
   weights:
     skills: 0.60
     domain: 0.40
-
-sources: []  

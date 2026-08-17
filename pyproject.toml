@@ -15,6 +15,7 @@ dependencies = [
     "uvicorn[standard]",
     "jinja2",
     "python-multipart",
+    "sentence-transformers",
 ]
 
 [project.scripts]

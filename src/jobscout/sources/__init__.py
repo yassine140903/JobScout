@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import logging
@@ -135,6 +136,41 @@ def classify_org_type(
     return "corporate"
 
 
+# ---------------------------------------------------------------------------
+# Position-type classification
+# ---------------------------------------------------------------------------
+
+_INTERNSHIP_KEYWORDS = {
+    "intern", "internship", "stage", "stagiaire", "werkstudent",
+    "working student", "apprentice", "apprenticeship", "alternance",
+    "alternant", "praktikum", "trainee",
+}
+
+_FREELANCE_KEYWORDS = {
+    "freelance", "freelancer", "contractor", "independent",
+    "self-employed", "consultant indépendant", "mission",
+    "contract position", "1099", "free-lance",
+}
+
+
+def classify_position_type(
+    title: str | None,
+    description: str | None,
+) -> str:
+    """Classify a job as 'internship', 'freelance', or 'job' (default)."""
+    title_lower = (title or "").lower()
+    desc_lower = (description or "").lower()
+
+    for kw in _INTERNSHIP_KEYWORDS:
+        if kw in title_lower or kw in desc_lower:
+            return "internship"
+
+    for kw in _FREELANCE_KEYWORDS:
+        if kw in title_lower or kw in desc_lower:
+            return "freelance"
+
+    return "job"
+
 
 # ---------------------------------------------------------------------------
 # Normalization & dedup
@@ -172,7 +208,50 @@ def normalize(raw: RawPosting) -> dict[str, Any]:
         "raw_data": json.dumps(raw.raw_data) if raw.raw_data else None,
         "dedup_hash": compute_dedup_hash(raw.title, raw.company),
         "org_type": classify_org_type(raw.company, raw.title, raw.description),
+        "position_type": classify_position_type(raw.title, raw.description),
     }
+
+
+# ---------------------------------------------------------------------------
+# Profile-driven config enrichment
+# ---------------------------------------------------------------------------
+
+def enrich_config_from_profile(config: dict, profile_row) -> dict:
+    """Inject profile-derived keywords into source configs.
+
+    For any source entry with an empty ``keywords`` list, fills it with
+    the profile's domains + top skills (capped at 8 terms).  EURAXESS uses
+    ``keyword`` (singular) — handled separately.
+
+    Locations are deliberately not injected: each API expects its own
+    format (EURES wants NUTS codes, WTTJ something else), so location
+    filtering is left to ``passes_filters()`` during matching.
+
+    Returns a deep-copied config so the original is not mutated.
+    """
+    config = copy.deepcopy(config)
+
+    # Parse profile fields (may be JSON strings or already lists)
+    def _parse(val):
+        if isinstance(val, str):
+            return json.loads(val or "[]")
+        return val or []
+
+    skills = _parse(profile_row["skills"])
+    domains = _parse(profile_row["domains"])
+
+    # Domains first (broader), then skills — deduplicated, capped
+    keywords = list(dict.fromkeys(domains + skills))[:8]
+
+    for source in config.get("sources", []):
+        # keywords (list) — WTTJ, EURES
+        if "keywords" in source and not source["keywords"]:
+            source["keywords"] = keywords
+        # keyword (singular) — EURAXESS
+        if "keyword" in source and not source["keyword"]:
+            source["keyword"] = " ".join(keywords[:3]) if keywords else None
+
+    return config
 
 
 # ---------------------------------------------------------------------------
@@ -248,16 +327,19 @@ def _fetch_with_retry(
 # ---------------------------------------------------------------------------
 
 def _insert_job(conn: sqlite3.Connection, job: dict[str, Any]) -> bool:
-    """Insert a single job with dedup_hash and org_type. Returns True if row was inserted."""
+    """Insert a single job with dedup_hash, org_type, and position_type.
+
+    Returns True if row was inserted.
+    """
     sql = """
         INSERT OR IGNORE INTO jobs
             (source, source_id, url, url_hash, title, company, description,
              location, country, language, seniority, posted_at, raw_data,
-             dedup_hash, org_type)
+             dedup_hash, org_type, position_type)
         VALUES
             (:source, :source_id, :url, :url_hash, :title, :company,
              :description, :location, :country, :language, :seniority,
-             :posted_at, :raw_data, :dedup_hash, :org_type)
+             :posted_at, :raw_data, :dedup_hash, :org_type, :position_type)
     """
     cur = conn.execute(sql, job)
     return cur.rowcount > 0

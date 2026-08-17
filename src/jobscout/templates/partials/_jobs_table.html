@@ -34,6 +34,16 @@
         </label>
 
         <label>
+            Position type
+            <select name="position_type">
+                <option value="">All positions</option>
+                <option value="job" {{ 'selected' if current_filters.position_type == 'job' }}>Job</option>
+                <option value="internship" {{ 'selected' if current_filters.position_type == 'internship' }}>Internship</option>
+                <option value="freelance" {{ 'selected' if current_filters.position_type == 'freelance' }}>Freelance</option>
+            </select>
+        </label>
+
+        <label>
             Location
             <input type="text" name="location" placeholder="Filter by location..."
                    value="{{ current_filters.location }}"
@@ -61,8 +71,12 @@
     </thead>
     <tbody>
         {% for job in jobs %}
-        <tr hx-get="/jobs/{{ job.id }}" hx-target="#job-detail" hx-swap="innerHTML"
-            style="cursor: pointer;">
+        <tr class="job-row"
+            hx-get="/jobs/{{ job.id }}"
+            hx-target="#job-detail-{{ job.id }}"
+            hx-swap="innerHTML"
+            hx-trigger="click[window.jobscoutShouldLoad]"
+            onclick="jobscoutToggleDetail(this, {{ job.id }})">
             <td>
                 {% set score_pct = (job.score * 100) | int %}
                 {% if score_pct >= 70 %}
@@ -91,6 +105,10 @@
                     <span class="status-pill" style="opacity: 0.4;">—</span>
                 {% endif %}
             </td>
+        </tr>
+        <tr class="detail-row">
+            <td colspan="7" id="job-detail-{{ job.id }}"
+                hx-on::after-swap="jobscoutRevealDetail(this, {{ job.id }})"></td>
         </tr>
         {% endfor %}
 

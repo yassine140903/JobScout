@@ -16,10 +16,11 @@ from fastapi.templating import Jinja2Templates
 from jobscout.config import load_config
 from jobscout.db import (
     get_connection, init_db,
-    migrate_m2, migrate_m3, migrate_m4, migrate_m5,
+    migrate_m2, migrate_m3, migrate_m4, migrate_m5, migrate_m6,
     get_profile, upsert_profile,
 )
 from jobscout.profiles import extract_text, RuleBasedExtractor
+from jobscout.sources import enrich_config_from_profile
 
 logger = logging.getLogger(__name__)
 
@@ -58,15 +59,18 @@ def _startup():
     migrate_m3(conn)
     migrate_m4(conn)
     migrate_m5(conn)
+    migrate_m6(conn)
 
-    # Load fixtures if DB is empty (first run)
-    job_count = conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
-    if job_count == 0:
-        from jobscout.fixtures import get_fixtures
-        from jobscout.db import insert_jobs_bulk
-        fixtures = get_fixtures()
-        inserted = insert_jobs_bulk(conn, fixtures)
-        logger.info("Loaded %d fixture postings", inserted)
+    # Clean up fixture/dummy data
+    deleted = conn.execute(
+        "DELETE FROM jobs WHERE source = ?", ("fixture",)
+    ).rowcount
+    if deleted:
+        conn.execute(
+            "DELETE FROM matches WHERE job_id NOT IN (SELECT id FROM jobs)"
+        )
+        conn.commit()
+        logger.info("Purged %d fixture jobs", deleted)
 
     from jobscout.sources import classify_org_type
     rows = conn.execute(
@@ -78,6 +82,17 @@ def _startup():
     if rows:
         conn.commit()
         logger.info("Backfilled org_type for %d jobs", len(rows))
+
+    from jobscout.sources import classify_position_type
+    rows = conn.execute(
+        "SELECT id, title, description FROM jobs WHERE position_type IS NULL"
+    ).fetchall()
+    for row in rows:
+        pt = classify_position_type(row["title"], row["description"])
+        conn.execute("UPDATE jobs SET position_type = ? WHERE id = ?", (pt, row["id"]))
+    if rows:
+        conn.commit()
+        logger.info("Backfilled position_type for %d jobs", len(rows))
 
     conn.close()
     logger.info("DB initialized and migrated")
@@ -216,6 +231,7 @@ def list_jobs(
     source: str = "",
     location: str = "",
     org_type: str = "",
+    position_type: str = "",
     db=Depends(_get_db),
 ):
     """Return the jobs table partial, with optional filters."""
@@ -238,6 +254,9 @@ def list_jobs(
     if org_type:
         query += " AND j.org_type = ?"
         params.append(org_type)
+    if position_type:
+        query += " AND j.position_type = ?"
+        params.append(position_type)
 
     query += " ORDER BY m.score DESC"
 
@@ -262,6 +281,7 @@ def list_jobs(
                 "source": source,
                 "location": location,
                 "org_type": org_type,
+                "position_type": position_type,
             },
         },
     )
@@ -334,20 +354,44 @@ def _run_pipeline(run_id: int, config: dict, org_types: list[str] | None = None)
     """Background: fetch jobs → score against profile. Runs in its own thread."""
     conn = get_connection()
     try:
-        _update_run(conn, run_id, progress=0.1, message="Fetching jobs...")
+        # --- Enrich config from profile ---
+        profile = get_profile(conn, "default")
+        if profile:
+            config = enrich_config_from_profile(config, profile)
+
+        # Build adapter name list for progress messages
+        enabled = [
+            s.get("name", s.get("adapter", "?"))
+            for s in config.get("sources", [])
+            if s.get("enabled", True)
+        ]
+        adapter_label = ", ".join(enabled) if enabled else "no sources"
+
+        _update_run(conn, run_id, progress=0.1,
+                     message=f"Fetching from {adapter_label}...")
 
         from jobscout.sources import run_fetch
-        run_fetch(conn, config)
+        fetch_run_id = run_fetch(conn, config)
+
+        if fetch_run_id < 0:
+            _update_run(conn, run_id, progress=0.3,
+                         message="No adapters returned results — scoring existing jobs...")
+        else:
+            # Summarize fetch results
+            fetch_row = conn.execute(
+                "SELECT total_jobs, new_jobs, error FROM runs WHERE id = ?",
+                (fetch_run_id,),
+            ).fetchone()
+            if fetch_row and fetch_row["error"]:
+                logger.warning("Fetch had errors: %s", fetch_row["error"])
 
         job_count = conn.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
-
-        _update_run(
-            conn, run_id, progress=0.5,
-            message=f"Scoring {job_count} jobs against profile (this may take a moment)...",
-        )
+        _update_run(conn, run_id, progress=0.5,
+                     message="Scoring jobs against profile (loading model, this may take a moment)...")
 
         from jobscout.matching import run_matching
-        results = run_matching(conn, "default", org_types=org_types)
+        weights = config.get("scoring", {}).get("weights")
+        results = run_matching(conn, "default", weights=weights, org_types=org_types)
 
         conn.execute(
             "UPDATE runs SET status = 'completed', progress = 1.0, "

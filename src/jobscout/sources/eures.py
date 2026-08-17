@@ -77,7 +77,11 @@ class EURESAdapter(SourceAdapter):
                 break
 
             for item in items:
-                posting = self._item_to_posting(item)
+                try:
+                    posting = self._item_to_posting(item)
+                except (AttributeError, TypeError, KeyError) as exc:
+                    logger.debug("eures: skipping malformed item — %s", exc)
+                    continue
                 if posting:
                     # Optionally fetch full description from detail endpoint
                     if fetch_details and posting.source_id:
@@ -109,13 +113,17 @@ class EURESAdapter(SourceAdapter):
         location_map = item.get("locationMap") or {}
         locations = []
         countries = set()
-        for country_code, regions in location_map.items():
-            countries.add(country_code.upper())
-            if isinstance(regions, list):
-                for region in regions:
-                    name = region.get("label") or region.get("nuts3Label")
-                    if name:
-                        locations.append(name)
+        if isinstance(location_map, dict):
+            for country_code, regions in location_map.items():
+                countries.add(country_code.upper())
+                if isinstance(regions, list):
+                    for region in regions:
+                        if isinstance(region, dict):
+                            name = region.get("label") or region.get("nuts3Label")
+                            if name:
+                                locations.append(name)
+                        elif isinstance(region, str):
+                            locations.append(region)
 
         location_str = ", ".join(locations) if locations else None
         country_str = list(countries)[0] if len(countries) == 1 else (
@@ -124,6 +132,8 @@ class EURESAdapter(SourceAdapter):
 
         # Employer
         employer = item.get("employer") or item.get("employerName")
+        if not isinstance(employer, str):
+            employer = str(employer) if employer else None
 
         # Description from snippet/summary
         description = item.get("description") or item.get("snippet")
@@ -136,7 +146,11 @@ class EURESAdapter(SourceAdapter):
         seniority = _map_experience(experience)
 
         # Language
-        language = item.get("language") or item.get("availableLanguages", ["en"])[0] if item.get("availableLanguages") else "en"
+        available = item.get("availableLanguages")
+        language = item.get("language")
+        if not language and available and isinstance(available, list):
+            language = available[0] if available else "en"
+        language = language or "en"
 
         return RawPosting(
             title=title,

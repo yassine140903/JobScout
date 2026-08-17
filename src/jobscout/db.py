@@ -165,6 +165,15 @@ def migrate_m5(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def migrate_m6(conn: sqlite3.Connection) -> None:
+    """Add position_type column to jobs."""
+    cur = conn.execute("PRAGMA table_info(jobs)")
+    cols = {row[1] for row in cur.fetchall()}
+    if "position_type" not in cols:
+        conn.execute("ALTER TABLE jobs ADD COLUMN position_type TEXT")
+        conn.commit()
+
+
 def find_by_dedup_hash(conn: sqlite3.Connection, dedup_hash: str) -> sqlite3.Row | None:
     """Return the first job matching this dedup hash, or None."""
     return conn.execute(
