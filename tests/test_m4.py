@@ -9,7 +9,9 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from jobscout.db import init_db, migrate_m2, migrate_m3, migrate_m4, find_by_dedup_hash
+from jobscout.db import (
+    init_db, migrate_m2, migrate_m3, migrate_m4, migrate_m5, find_by_dedup_hash,
+)
 from jobscout.sources import (
     RawPosting,
     SourceAdapter,
@@ -31,6 +33,7 @@ def db(tmp_path: Path) -> sqlite3.Connection:
     migrate_m2(conn)
     migrate_m3(conn)
     migrate_m4(conn)
+    migrate_m5(conn)
     return conn
 
 

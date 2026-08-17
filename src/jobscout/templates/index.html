@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Upload zone -->
+<section id="upload-section">
+    <h2>Upload your CV</h2>
+    <form hx-post="/upload" hx-target="#profile-card" hx-encoding="multipart/form-data">
+        <input type="file" name="cv" accept=".pdf,.docx" required>
+        <button type="submit">Upload & Extract</button>
+    </form>
+</section>
+
+<!-- Profile card (filled after upload) -->
+<div id="profile-card"></div>
+
+<!-- Fetch & Match (hidden until profile exists) -->
+<section id="run-section" style="display: none;">
+    <h2>Fetch & Match</h2>
+    <label for="locations">Target locations (comma-separated)</label>
+    <input type="text" id="locations" name="locations" placeholder="Paris, Berlin, Remote">
+    <fieldset>
+        <legend>Organization types</legend>
+        <label><input type="checkbox" name="org_types" value="lab" checked> Lab</label>
+        <label><input type="checkbox" name="org_types" value="startup" checked> Startup</label>
+        <label><input type="checkbox" name="org_types" value="corporate" checked> Corporate</label>
+    </fieldset>
+    <button hx-post="/runs" hx-target="#run-status"
+            hx-include="#run-section input, #run-section select"
+            id="fetch-btn">
+        Fetch & Match
+    </button>
+    <div id="run-status"></div>
+</section>
+
+<!-- Filters + Results (hidden until run completes) -->
+<section id="results-section" style="display: none;">
+    <h2>Results</h2>
+    <div id="filters">
+        <!-- Filters will go here in step 3d -->
+    </div>
+    <div id="jobs-table"></div>
+</section>
+
+<!-- Job detail pane -->
+<div id="job-detail"></div>
+
+{% endblock %}

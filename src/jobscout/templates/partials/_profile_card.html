@@ -1,0 +1,46 @@
+<article>
+    <header>
+        <strong>Profile extracted</strong>
+        <small>from {{ filename }}</small>
+    </header>
+
+    <div>
+        <strong>Skills:</strong>
+        {% if profile.skills %}
+            {% for skill in profile.skills %}
+                <mark>{{ skill }}</mark>
+            {% endfor %}
+        {% else %}
+            <em>none detected</em>
+        {% endif %}
+    </div>
+
+    <div>
+        <strong>Domains:</strong>
+        {% if profile.domains %}
+            {% for domain in profile.domains %}
+                <mark>{{ domain }}</mark>
+            {% endfor %}
+        {% else %}
+            <em>none detected</em>
+        {% endif %}
+    </div>
+
+    <div>
+        <strong>Seniority:</strong> {{ profile.seniority or "not detected" }}
+    </div>
+
+    <div>
+        <strong>Languages:</strong>
+        {% if profile.languages %}
+            {{ profile.languages | join(", ") }}
+        {% else %}
+            <em>none detected</em>
+        {% endif %}
+    </div>
+</article>
+
+<!-- Unhide the Fetch & Match section -->
+<script>
+    document.getElementById("run-section").style.display = "block";
+</script>

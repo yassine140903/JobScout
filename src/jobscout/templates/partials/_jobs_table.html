@@ -1,0 +1,104 @@
+<!-- Filters -->
+<form hx-get="/jobs" hx-target="#jobs-table" hx-trigger="change" hx-swap="innerHTML">
+    <input type="hidden" name="profile" value="default">
+
+    <div class="grid">
+        <label>
+            Min score
+            <input type="range" name="min_score" min="0" max="1" step="0.05"
+                   value="{{ current_filters.min_score }}"
+                   oninput="this.nextElementSibling.textContent = this.value">
+            <small>{{ current_filters.min_score }}</small>
+        </label>
+
+        <label>
+            Source
+            <select name="source">
+                <option value="">All sources</option>
+                {% for s in sources %}
+                    <option value="{{ s }}" {{ 'selected' if s == current_filters.source }}>
+                        {{ s }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            Org type
+            <select name="org_type">
+                <option value="">All types</option>
+                <option value="lab" {{ 'selected' if current_filters.org_type == 'lab' }}>Lab</option>
+                <option value="startup" {{ 'selected' if current_filters.org_type == 'startup' }}>Startup</option>
+                <option value="corporate" {{ 'selected' if current_filters.org_type == 'corporate' }}>Corporate</option>
+            </select>
+        </label>
+
+        <label>
+            Location
+            <input type="text" name="location" placeholder="Filter by location..."
+                   value="{{ current_filters.location }}"
+                   hx-trigger="keyup changed delay:300ms">
+        </label>
+    </div>
+</form>
+
+<!-- Results count -->
+<small>{{ jobs | length }} jobs found</small>
+
+<!-- Table -->
+<figure>
+<table role="grid">
+    <thead>
+        <tr>
+            <th>Score</th>
+            <th>Title</th>
+            <th>Company</th>
+            <th>Type</th>
+            <th>Location</th>
+            <th>Source</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for job in jobs %}
+        <tr hx-get="/jobs/{{ job.id }}" hx-target="#job-detail" hx-swap="innerHTML"
+            style="cursor: pointer;">
+            <td>
+                {% set score_pct = (job.score * 100) | int %}
+                {% if score_pct >= 70 %}
+                    <span class="score-badge score-high">{{ score_pct }}%</span>
+                {% elif score_pct >= 40 %}
+                    <span class="score-badge score-medium">{{ score_pct }}%</span>
+                {% else %}
+                    <span class="score-badge score-low">{{ score_pct }}%</span>
+                {% endif %}
+            </td>
+            <td>{{ job.title }}</td>
+            <td>{{ job.company or "—" }}</td>
+            <td>
+                {% if job.org_type %}
+                    <span class="org-pill org-{{ job.org_type }}">{{ job.org_type }}</span>
+                {% endif %}
+            </td>
+            <td>{{ job.location or "—" }}</td>
+            <td>{{ job.source }}</td>
+            <td>
+                {% if job.match_status %}
+                    <span class="status-pill status-{{ job.match_status }}">
+                        {{ job.match_status }}
+                    </span>
+                {% else %}
+                    <span class="status-pill" style="opacity: 0.4;">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+
+        {% if not jobs %}
+        <tr>
+            <td colspan="7"><em>No jobs match your filters.</em></td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+</figure>

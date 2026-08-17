@@ -22,9 +22,8 @@ SENIORITY_ORDER: dict[str, int] = {
 }
 
 DEFAULT_WEIGHTS: dict[str, float] = {
-    "skills": 0.50,
-    "domain": 0.30,
-    "seniority": 0.20,
+    "skills": 0.60,
+    "domain": 0.40,
 }
 
 # Map job posting language codes to profile spoken language names
@@ -50,11 +49,11 @@ def build_facet_text(items: list[str]) -> str:
 
 
 def score_seniority(profile_level: str, job_level: str) -> float:
-    """Ordinal scoring. 1.0 = exact match, decays with distance."""
+    """Seniority multiplier. 1.0 = exact match, decays sharply with distance."""
     p = SENIORITY_ORDER.get(profile_level, 1)
     j = SENIORITY_ORDER.get(job_level, 1)
     distance = abs(p - j)
-    return {0: 1.0, 1: 0.6, 2: 0.3}.get(distance, 0.1)
+    return {0: 1.0, 1: 0.85, 2: 0.6, 3: 0.4}.get(distance, 0.3)
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -110,20 +109,17 @@ def score_job(
 
     skills_score = max(0.0, cosine_similarity(profile_skills_emb, job_skills_emb))
     domain_score = max(0.0, cosine_similarity(profile_domain_emb, job_domain_emb))
-    seniority_score = score_seniority(profile_seniority, job_seniority)
+    seniority_multiplier = score_seniority(profile_seniority, job_seniority)
 
-    final = (
-        w["skills"] * skills_score
-        + w["domain"] * domain_score
-        + w["seniority"] * seniority_score
-    )
+    base_score = w["skills"] * skills_score + w["domain"] * domain_score
+    final = base_score * seniority_multiplier
 
     matched_skills = sorted(set(profile_skills) & set(job_skills))
 
     return {
         "skills_score": round(skills_score, 4),
         "domain_score": round(domain_score, 4),
-        "seniority_score": round(seniority_score, 4),
+        "seniority_multiplier": round(seniority_multiplier, 4),
         "final_score": round(final, 4),
         "weights": w,
         "matched_skills": matched_skills,
@@ -218,7 +214,7 @@ def _upsert_match(
             json.dumps({
                 "skills": result["skills_score"],
                 "domain": result["domain_score"],
-                "seniority": result["seniority_score"],
+                "seniority": result["seniority_multiplier"],
             }),
             json.dumps(result["matched_skills"]),
         ),
@@ -234,6 +230,7 @@ def run_matching(
     profile_name: str,
     embedder: Embedder | None = None,
     weights: dict[str, float] | None = None,
+    org_types: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Run the full matching pipeline for a profile against all jobs.
 
@@ -274,6 +271,9 @@ def run_matching(
     # 4. Load and filter jobs
     all_jobs = get_all_jobs(conn)
     jobs = [j for j in all_jobs if passes_filters(j, profile)]
+
+    if org_types:
+        jobs = [j for j in jobs if (j["org_type"] or "corporate") in org_types]
 
     # 5. Extract → embed → score each job
     extractor = RuleBasedExtractor()

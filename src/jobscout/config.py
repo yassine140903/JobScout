@@ -15,10 +15,11 @@ DEFAULTS: dict[str, Any] = {
         "name": "intfloat/multilingual-e5-base",
     },
     "scoring": {
+        # Must stay in sync with matching.DEFAULT_WEIGHTS. Seniority is not a
+        # weight — it is a multiplier applied on top of the weighted base score.
         "weights": {
-            "skills": 0.50,
-            "domain": 0.30,
-            "seniority": 0.20,
+            "skills": 0.60,
+            "domain": 0.40,
         },
     },
     "sources": [

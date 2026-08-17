@@ -11,6 +11,10 @@ dependencies = [
     "httpx",
     "selectolax",
     "feedparser",
+    "fastapi",
+    "uvicorn[standard]",
+    "jinja2",
+    "python-multipart",
 ]
 
 [project.scripts]

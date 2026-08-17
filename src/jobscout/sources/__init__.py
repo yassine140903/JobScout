@@ -56,6 +56,87 @@ class SourceAdapter(ABC):
 
 
 # ---------------------------------------------------------------------------
+# Org-type classification
+# ---------------------------------------------------------------------------
+
+# Keywords are checked case-insensitively unless noted.
+
+_LAB_COMPANY_KEYWORDS = {
+    # Generic
+    "university", "université", "universität", "universidad", "universiteit",
+    "institut", "institute",
+    "research center", "research centre", "laboratory", "laboratoire",
+    "national lab", "academic", "faculty",
+    # French institutions
+    "cnrs", "inria", "inrae", "cea", "inserm", "ird", "cirad",
+    "sciences po", "école polytechnique", "école normale",
+    # German institutions
+    "max planck", "fraunhofer", "helmholtz", "leibniz",
+    # Other notable
+    "epfl", "eth zurich", "eth zürich", "mit ", "caltech",
+}
+
+_LAB_TITLE_KEYWORDS = {
+    "postdoc", "post-doc", "postdoctoral",
+    "researcher", "research scientist", "research engineer", "research fellow",
+    "principal investigator", "professor", "lecturer",
+    "phd", "doctoral", "chargé de recherche", "directeur de recherche",
+}
+
+_LAB_DESCRIPTION_KEYWORDS = {
+    "publications", "peer-reviewed", "tenure", "phd required",
+    "phd preferred", "research group", "principal investigator",
+    "scientific community", "academic environment",
+}
+
+_STARTUP_KEYWORDS = {
+    "startup", "start-up", "early-stage", "early stage",
+    "seed funding", "pre-seed", "series a", "series b", "series c",
+    "fast-paced", "fast paced", "small team", "growing team",
+    "we're building", "we are building", "founding team",
+    "co-founder", "cofounder", "disrupting", "venture-backed",
+    "venture backed", "backed by", "yc ", "y combinator",
+    "techstars", "incubator", "accelerator",
+}
+
+
+def classify_org_type(
+    company: str | None,
+    title: str | None,
+    description: str | None,
+) -> str:
+    """Classify a job's organization as 'lab', 'startup', or 'corporate'.
+
+    Priority: lab > startup > corporate (default).
+    """
+    company_lower = (company or "").lower()
+    title_lower = (title or "").lower()
+    desc_lower = (description or "").lower()
+
+    # --- Lab check (strongest signal: company name, then title, then description) ---
+    for kw in _LAB_COMPANY_KEYWORDS:
+        if kw in company_lower:
+            return "lab"
+
+    for kw in _LAB_TITLE_KEYWORDS:
+        if kw in title_lower:
+            return "lab"
+
+    # Description alone is weaker — require 2+ hits to avoid false positives
+    lab_desc_hits = sum(1 for kw in _LAB_DESCRIPTION_KEYWORDS if kw in desc_lower)
+    if lab_desc_hits >= 2:
+        return "lab"
+
+    # --- Startup check (company name or description) ---
+    for kw in _STARTUP_KEYWORDS:
+        if kw in company_lower or kw in desc_lower:
+            return "startup"
+
+    return "corporate"
+
+
+
+# ---------------------------------------------------------------------------
 # Normalization & dedup
 # ---------------------------------------------------------------------------
 
@@ -74,6 +155,7 @@ def compute_url_hash(url: str | None) -> str | None:
 
 def normalize(raw: RawPosting) -> dict[str, Any]:
     """Convert a RawPosting to a dict ready for job insertion."""
+    
     return {
         "source": raw.source,
         "source_id": raw.source_id,
@@ -89,6 +171,7 @@ def normalize(raw: RawPosting) -> dict[str, Any]:
         "posted_at": raw.posted_at,
         "raw_data": json.dumps(raw.raw_data) if raw.raw_data else None,
         "dedup_hash": compute_dedup_hash(raw.title, raw.company),
+        "org_type": classify_org_type(raw.company, raw.title, raw.description),
     }
 
 
@@ -165,16 +248,16 @@ def _fetch_with_retry(
 # ---------------------------------------------------------------------------
 
 def _insert_job(conn: sqlite3.Connection, job: dict[str, Any]) -> bool:
-    """Insert a single job with dedup_hash. Returns True if row was inserted."""
+    """Insert a single job with dedup_hash and org_type. Returns True if row was inserted."""
     sql = """
         INSERT OR IGNORE INTO jobs
             (source, source_id, url, url_hash, title, company, description,
              location, country, language, seniority, posted_at, raw_data,
-             dedup_hash)
+             dedup_hash, org_type)
         VALUES
             (:source, :source_id, :url, :url_hash, :title, :company,
              :description, :location, :country, :language, :seniority,
-             :posted_at, :raw_data, :dedup_hash)
+             :posted_at, :raw_data, :dedup_hash, :org_type)
     """
     cur = conn.execute(sql, job)
     return cur.rowcount > 0

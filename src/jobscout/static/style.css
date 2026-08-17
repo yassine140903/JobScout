@@ -1,0 +1,119 @@
+/* JobScout custom styles — layered on top of Pico CSS */
+
+/* Score badges */
+.score-badge {
+    display: inline-block;
+    padding: 0.2em 0.6em;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.85em;
+}
+.score-high   { background: #d4edda; color: #155724; }
+.score-medium { background: #fff3cd; color: #856404; }
+.score-low    { background: #f8d7da; color: #721c24; }
+
+/* Org-type pills */
+.org-pill {
+    display: inline-block;
+    padding: 0.15em 0.5em;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.org-lab       { background: #e8d5f5; color: #5b2d8e; }
+.org-startup   { background: #d0f0fd; color: #0c5776; }
+.org-corporate { background: #e2e8f0; color: #475569; }
+
+/* Status pills */
+.status-pill {
+    display: inline-block;
+    padding: 0.15em 0.5em;
+    border-radius: 12px;
+    font-size: 0.75em;
+    cursor: pointer;
+}
+.status-saved    { background: #bfdbfe; color: #1e40af; }
+.status-applied  { background: #bbf7d0; color: #166534; }
+.status-dismissed { background: #fecaca; color: #991b1b; }
+
+/* Upload section */
+#upload-section input[type="file"] {
+    margin-bottom: 0.5em;
+}
+
+/* Job detail pane */
+#job-detail {
+    margin-top: 2em;
+}
+
+/* Progress bar */
+.progress-bar {
+    width: 100%;
+    height: 1.2em;
+    background: #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    background: #3b82f6;
+    transition: width 0.3s ease;
+    border-radius: 6px;
+}
+
+/* Score breakdown */
+.score-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    margin: 0.5em 0;
+}
+.facet-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+}
+.facet-label {
+    width: 5em;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+.facet-value {
+    width: 3em;
+    text-align: right;
+    font-size: 0.85em;
+}
+
+/* Status buttons */
+.status-buttons {
+    display: flex;
+    gap: 0.5em;
+    margin: 0.8em 0;
+}
+.status-btn {
+    display: inline-block;
+    padding: 0.4em 0.9em;
+    font-size: 0.85em;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #f8f9fa;
+    color: #374151;
+    cursor: pointer;
+    margin-bottom: 0;
+    user-select: none;
+}
+.status-btn:hover {
+    border-color: #9ca3af;
+    background: #f1f3f5;
+}
+.status-btn.status-saved    { background: #bfdbfe; border-color: #3b82f6; }
+.status-btn.status-applied  { background: #bbf7d0; border-color: #22c55e; }
+.status-btn.status-dismissed { background: #fecaca; border-color: #ef4444; }
+
+/* Job description */
+.job-description {
+    white-space: pre-wrap;
+    line-height: 1.6;
+}

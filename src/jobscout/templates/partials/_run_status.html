@@ -1,0 +1,22 @@
+{% if status == "running" %}
+<div hx-get="/runs/{{ run_id }}/status" hx-trigger="every 2s" hx-swap="outerHTML">
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: {{ (progress * 100) | int }}%"></div>
+    </div>
+    <small>{{ progress_message }}</small>
+</div>
+
+{% elif status == "completed" %}
+<div>
+    <p>&#10003; {{ progress_message }}</p>
+</div>
+<script>
+    document.getElementById("results-section").style.display = "block";
+    htmx.ajax("GET", "/jobs?profile=default", {target: "#jobs-table"});
+</script>
+
+{% elif status == "failed" %}
+<div>
+    <p class="error">&#10007; {{ progress_message }}</p>
+</div>
+{% endif %}

@@ -7,3 +7,4 @@ __pycache__/
 my_env/
 .env
 cv.pdf
+jobscout.db

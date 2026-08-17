@@ -1,4 +1,4 @@
-"""CLI entry point: jobscout init, ingest, profiles, match, fetch."""
+"""CLI entry point: jobscout init, ingest, profiles, match, fetch, serve."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 from jobscout.config import load_config
 from jobscout.db import (
     init_db, insert_jobs_bulk, table_counts,
-    migrate_m2, migrate_m3, migrate_m4,
+    migrate_m2, migrate_m3, migrate_m4, migrate_m5,
     upsert_profile, get_profile, get_all_profiles,
 )
 from jobscout.fixtures import get_fixtures
@@ -26,6 +26,7 @@ def _setup_db(config: dict):
     migrate_m2(conn)
     migrate_m3(conn)
     migrate_m4(conn)
+    migrate_m5(conn)
     return conn, db_path
 
 
@@ -136,7 +137,7 @@ def cmd_match(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     print(f"Matching profile '{args.profile}' against all jobs ...")
-    results = run_matching(conn, profile, config)
+    results = run_matching(conn, args.profile)
 
     if not results:
         print("No matches found (check location/language filters).")
@@ -145,7 +146,7 @@ def cmd_match(args: argparse.Namespace) -> None:
         for i, r in enumerate(results[:20], 1):
             print(f"  {i:2d}. [{r['final_score']:.2f}] {r['job_title']} @ {r['job_company']}")
             print(f"      skills={r['skills_score']:.2f}  domain={r['domain_score']:.2f}  "
-                  f"seniority={r['seniority_score']:.2f}")
+                  f"seniority×{r['seniority_multiplier']:.2f}")
             if r["matched_skills"]:
                 print(f"      matched: {', '.join(r['matched_skills'])}")
 
@@ -203,6 +204,19 @@ def cmd_fetch(args: argparse.Namespace) -> None:
     conn.close()
 
 
+def cmd_serve(args: argparse.Namespace) -> None:
+    """Start the web UI."""
+    import uvicorn
+
+    print(f"Starting JobScout on http://{args.host}:{args.port}")
+    uvicorn.run(
+        "jobscout.web:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="jobscout",
@@ -237,6 +251,12 @@ def main() -> None:
     fetch_parser.add_argument("--sources", default=None, help="Comma-separated adapter names (default: all enabled)")
     fetch_parser.add_argument("-v", "--verbose", action="store_true", help="Show debug output")
 
+    # serve
+    serve_parser = subparsers.add_parser("serve", help="Start the web UI")
+    serve_parser.add_argument("--host", default="127.0.0.1", help="Host to bind to (default: 127.0.0.1)")
+    serve_parser.add_argument("--port", type=int, default=8000, help="Port to bind to (default: 8000)")
+    serve_parser.add_argument("--reload", action="store_true", help="Auto-reload on code changes (dev mode)")
+
     args = parser.parse_args()
 
     if args.command == "init":
@@ -249,6 +269,8 @@ def main() -> None:
         cmd_match(args)
     elif args.command == "fetch":
         cmd_fetch(args)
+    elif args.command == "serve":
+        cmd_serve(args)
     else:
         parser.print_help()
         sys.exit(1)

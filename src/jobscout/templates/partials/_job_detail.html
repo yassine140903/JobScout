@@ -1,0 +1,87 @@
+<article>
+    <header>
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div>
+                <h3 style="margin-bottom: 0.2em;">{{ job.title }}</h3>
+                <p>
+                    <strong>{{ job.company or "Unknown company" }}</strong>
+                    {% if job.org_type %}
+                        <span class="org-pill org-{{ job.org_type }}">{{ job.org_type }}</span>
+                    {% endif %}
+                    {% if job.location %}
+                        &middot; {{ job.location }}
+                    {% endif %}
+                </p>
+            </div>
+            {% if match %}
+                {% set score_pct = (match.score * 100) | int %}
+                {% if score_pct >= 70 %}
+                    <span class="score-badge score-high" style="font-size: 1.2em;">
+                        {{ score_pct }}%
+                    </span>
+                {% elif score_pct >= 40 %}
+                    <span class="score-badge score-medium" style="font-size: 1.2em;">
+                        {{ score_pct }}%
+                    </span>
+                {% else %}
+                    <span class="score-badge score-low" style="font-size: 1.2em;">
+                        {{ score_pct }}%
+                    </span>
+                {% endif %}
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Score breakdown -->
+    {% if facet_scores %}
+    <details open>
+        <summary>Score breakdown</summary>
+        <div class="score-breakdown">
+            {% for facet, score in facet_scores.items() %}
+            <div class="facet-row">
+                <span class="facet-label">{{ facet | capitalize }}</span>
+                <div class="progress-bar" style="flex: 1;">
+                    <div class="progress-fill" style="width: {{ (score * 100) | int }}%"></div>
+                </div>
+                <span class="facet-value">{{ (score * 100) | int }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+
+    <!-- Matched skills -->
+    {% if matched_skills %}
+    <div style="margin-bottom: 1em;">
+        <strong>Matched skills:</strong>
+        {% for skill in matched_skills %}
+            <mark>{{ skill }}</mark>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Status buttons -->
+    <div id="status-buttons-{{ job.id }}">
+        {% include "partials/_status_buttons.html" %}
+    </div>
+
+    <!-- Meta -->
+    <small>
+        Source: {{ job.source }}
+        {% if job.posted_at %} &middot; Posted: {{ job.posted_at }} {% endif %}
+        {% if job.url %}
+            &middot; <a href="{{ job.url }}" target="_blank" rel="noopener">View original</a>
+        {% endif %}
+    </small>
+
+    <hr>
+
+    <!-- Full description -->
+    {% if job.description %}
+    <div class="job-description">
+        {{ job.description }}
+    </div>
+    {% else %}
+    <p><em>No description available.</em></p>
+    {% endif %}
+</article>

@@ -6,6 +6,7 @@ import tempfile
 from jobscout.config import load_config, DEFAULTS
 from jobscout.db import init_db, insert_jobs_bulk, get_all_jobs, get_job, table_counts
 from jobscout.fixtures import get_fixtures
+from jobscout.matching import DEFAULT_WEIGHTS
 
 
 def _temp_db() -> Path:
@@ -71,7 +72,12 @@ def test_config_defaults():
     config = load_config(Path("nonexistent.yaml"))
     assert config == DEFAULTS
     assert config["db_path"] == "jobscout.db"
-    assert config["scoring"]["weights"]["skills"] == 0.35
+    # Config defaults must agree with the scorer's own defaults
+    assert config["scoring"]["weights"] == DEFAULT_WEIGHTS
+    assert config["scoring"]["weights"]["skills"] == 0.60
+    assert config["scoring"]["weights"]["domain"] == 0.40
+    # Seniority is a multiplier now, not a weighted facet
+    assert "seniority" not in config["scoring"]["weights"]
 
 
 def test_mixed_languages_in_fixtures():

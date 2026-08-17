@@ -7,9 +7,7 @@ model:
 
 scoring:
   weights:
-    skills: 0.35
-    domain: 0.30
-    seniority: 0.20
-    location: 0.15
+    skills: 0.60
+    domain: 0.40
 
 sources: []  

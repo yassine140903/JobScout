@@ -150,6 +150,20 @@ def migrate_m4(conn: sqlite3.Connection) -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_dedup_hash ON jobs(dedup_hash)")
         conn.commit()
 
+def migrate_m5(conn: sqlite3.Connection) -> None:
+    """Add M5 columns: org_type on jobs, progress_message on runs."""
+    # -- jobs.org_type --
+    job_cols = {row[1] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+    if "org_type" not in job_cols:
+        conn.execute("ALTER TABLE jobs ADD COLUMN org_type TEXT")
+    
+    # -- runs.progress_message --
+    run_cols = {row[1] for row in conn.execute("PRAGMA table_info(runs)").fetchall()}
+    if "progress_message" not in run_cols:
+        conn.execute("ALTER TABLE runs ADD COLUMN progress_message TEXT")
+    
+    conn.commit()
+
 
 def find_by_dedup_hash(conn: sqlite3.Connection, dedup_hash: str) -> sqlite3.Row | None:
     """Return the first job matching this dedup hash, or None."""
@@ -160,7 +174,7 @@ def find_by_dedup_hash(conn: sqlite3.Connection, dedup_hash: str) -> sqlite3.Row
 
 def get_connection(db_path: Path = DEFAULT_DB_PATH) -> sqlite3.Connection:
     """Return a connection with sensible defaults (WAL, foreign keys, row factory)."""
-    conn = sqlite3.connect(str(db_path))
+    conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA foreign_keys = ON")
     conn.row_factory = sqlite3.Row

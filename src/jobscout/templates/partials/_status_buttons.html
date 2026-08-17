@@ -1,0 +1,26 @@
+{% set current = current_status if current_status is defined else (match.status if match is defined else None) %}
+{% set jid = job_id if job_id is defined else job.id %}
+
+<div class="status-buttons" id="status-buttons-{{ jid }}">
+    <span role="button" class="status-btn {% if current == 'saved' %}status-saved{% endif %}"
+            hx-post="/jobs/{{ jid }}/status"
+            hx-vals='{"status": "saved"}'
+            hx-target="#status-buttons-{{ jid }}"
+            hx-swap="outerHTML">
+        &#9733; Save
+    </span>
+    <span role="button" class="status-btn {% if current == 'applied' %}status-applied{% endif %}"
+            hx-post="/jobs/{{ jid }}/status"
+            hx-vals='{"status": "applied"}'
+            hx-target="#status-buttons-{{ jid }}"
+            hx-swap="outerHTML">
+        &#10003; Applied
+    </span>
+    <span role="button" class="status-btn {% if current == 'dismissed' %}status-dismissed{% endif %}"
+            hx-post="/jobs/{{ jid }}/status"
+            hx-vals='{"status": "dismissed"}'
+            hx-target="#status-buttons-{{ jid }}"
+            hx-swap="outerHTML">
+        &#10007; Dismiss
+    </span>
+</div>

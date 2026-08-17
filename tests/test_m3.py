@@ -211,15 +211,22 @@ class TestSeniorityScoring:
         assert score_seniority("mid", "mid") == 1.0
 
     def test_one_step(self):
-        assert score_seniority("mid", "senior") == 0.6
-        assert score_seniority("senior", "mid") == 0.6
+        assert score_seniority("mid", "senior") == 0.85
+        assert score_seniority("senior", "mid") == 0.85
 
     def test_two_steps(self):
-        assert score_seniority("junior", "senior") == 0.3
+        assert score_seniority("junior", "senior") == 0.6
 
-    def test_three_plus_steps(self):
-        assert score_seniority("intern", "lead") == 0.1
-        assert score_seniority("junior", "principal") == 0.1
+    def test_three_steps(self):
+        # junior(1) -> lead(4)
+        assert score_seniority("junior", "lead") == 0.4
+        assert score_seniority("intern", "senior") == 0.4
+
+    def test_four_plus_steps(self):
+        # Everything at distance >= 4 bottoms out at the same floor
+        assert score_seniority("intern", "lead") == 0.3
+        assert score_seniority("junior", "principal") == 0.3
+        assert score_seniority("intern", "principal") == 0.3
 
     def test_unknown_defaults_to_junior(self):
         # Unknown maps to index 1 (junior)
@@ -312,15 +319,18 @@ class TestScoreJob:
     def test_custom_weights(self):
         vec = np.random.randn(768).astype(np.float32)
         vec = vec / np.linalg.norm(vec)
-        weights = {"skills": 1.0, "domain": 0.0, "seniority": 0.0}
+        weights = {"skills": 1.0, "domain": 0.0}
         result = score_job(
             profile_skills_emb=vec, profile_domain_emb=vec,
             job_skills_emb=vec, job_domain_emb=vec,
-            profile_seniority="junior", job_seniority="principal",
+            profile_seniority="junior", job_seniority="junior",
             profile_skills=[], job_skills=[],
             weights=weights,
         )
-        # Seniority mismatch doesn't matter with weight 0
+        # Matching seniority => neutral 1.0 multiplier, so the final score is
+        # the weighted base alone: all weight on a perfect skills match.
+        assert result["seniority_multiplier"] == 1.0
+        assert result["final_score"] == pytest.approx(result["skills_score"], abs=1e-3)
         assert result["final_score"] == pytest.approx(1.0, abs=1e-3)
 
     def test_no_skill_overlap(self):
@@ -405,6 +415,6 @@ class TestRunMatching:
         weights = {"skills": 1.0, "domain": 0.0, "seniority": 0.0}
         results = run_matching(conn, "ml-engineer", embedder=embedder, weights=weights)
         assert len(results) > 0
-        # All results should have seniority_score but it shouldn't affect ranking
+        # All results should have seniority_multiplier but it shouldn't affect ranking
         for r in results:
-            assert "seniority_score" in r
+            assert "seniority_multiplier" in r
