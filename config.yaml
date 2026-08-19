@@ -5,7 +5,60 @@ db_path: jobscout.db
 model:
   name: intfloat/multilingual-e5-base
 
+extraction:
+  # pdfplumber word-merge tolerance for CV PDFs. Lower = less word gluing.
+  pdf_x_tolerance: 1.5
+
+profile:
+  # Your years of professional experience. This is the authoritative figure —
+  # CV date parsing is advisory only and never overwrites it. Set to null to
+  # make the seniority facet neutral (scores 1.0, filters nothing).
+  # Run `jobscout profiles` to see what date parsing suggests from your CV.
+  candidate_years: 0.75
+
 scoring:
   weights:
     skills: 0.60
     domain: 0.40
+
+  seniority:
+    # How many years short of a job's requirement before it is filtered out
+    # rather than just penalised. Being over the requirement never filters.
+    gate_years: 2.0
+
+    # Whether a requirement guessed from the job title may filter a job out.
+    # Off by default: titles are inflated often enough that a wrong filter
+    # loses the job entirely, while a wrong penalty only costs rank position.
+    # Jobs with an inferred requirement are still penalised, just kept visible.
+    filter_on_inferred: false
+
+sources:
+  # Only the keys you want to override — anything omitted falls back to
+  # jobscout.config.DEFAULTS. The full list of adapters lives there.
+  - name: wttj
+    adapter: wttj
+    enabled: true
+    keywords: []          # empty = filled from your profile at fetch time
+    max_pages: 5
+
+    # The Algolia search index carries no job descriptions at all — only a
+    # ~1KB requirements blurb, and that is null on 15% of postings. The real
+    # 2-8KB text needs one request per posting against the detail endpoint.
+    #
+    # Turn this off if that endpoint starts refusing traffic: the run then
+    # degrades to index-only rather than failing. Watch the run log — a
+    # detail failure rate above 10% is the signal it is throttling.
+    fetch_details: true
+    detail_concurrency: 8
+
+  - name: eures
+    adapter: eures
+    enabled: true
+    keywords: []
+    locations: []
+    max_pages: 3
+
+    # EURES spans the whole EU. The skill vocabulary covers fr/en/de; postings
+    # in the long tail score on an empty skill set, which ranks them on domain
+    # similarity alone. Set to null to keep every language.
+    languages: [fr, en, de]

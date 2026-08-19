@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ast
+import json
 import logging
 from typing import Any
 
@@ -16,6 +18,10 @@ SEARCH_ENDPOINT = f"{BASE_URL}/jv-searchengine/public/jv-search/search"
 DETAIL_ENDPOINT = f"{BASE_URL}/jv-searchengine/public/jv/id"
 DEFAULT_RESULTS_PER_PAGE = 50
 DEFAULT_MAX_PAGES = 5
+# Languages whose postings the skill vocabulary can actually read. The rest
+# of the EU is still fetched and simply not kept - EURES has no language
+# facet we can filter on server-side, so this is an ingest filter.
+DEFAULT_LANGUAGES: tuple[str, ...] = ("fr", "en", "de")
 
 
 class EURESAdapter(SourceAdapter):
@@ -26,6 +32,13 @@ class EURESAdapter(SourceAdapter):
         if not keywords:
             logger.warning("eures: no keywords configured, skipping")
             return []
+
+        # EURES spans the whole EU, and the long tail of its languages is not
+        # covered by the skill vocabulary - those postings score on an empty
+        # skill set, which is worse than not having them. Set to null or [] to
+        # keep every language.
+        languages = source_config.get("languages", DEFAULT_LANGUAGES)
+        languages = {lang.lower() for lang in languages} if languages else None
 
         locations = source_config.get("locations", [])  # NUTS codes, e.g. ["fr", "de"]
         results_per_page = source_config.get("results_per_page", DEFAULT_RESULTS_PER_PAGE)
@@ -46,6 +59,19 @@ class EURESAdapter(SourceAdapter):
                     if key not in seen_ids:
                         seen_ids.add(key)
                         all_postings.append(p)
+
+        if languages is not None:
+            kept = [
+                p for p in all_postings
+                if (p.language or "").lower()[:2] in languages
+            ]
+            dropped = len(all_postings) - len(kept)
+            if dropped:
+                logger.info(
+                    "eures: dropped %d of %d postings outside languages %s",
+                    dropped, len(all_postings), sorted(languages),
+                )
+            all_postings = kept
 
         logger.info("eures: %d postings across %d keywords", len(all_postings), len(keywords))
         return all_postings
@@ -130,10 +156,8 @@ class EURESAdapter(SourceAdapter):
             ",".join(sorted(countries)) if countries else None
         )
 
-        # Employer
-        employer = item.get("employer") or item.get("employerName")
-        if not isinstance(employer, str):
-            employer = str(employer) if employer else None
+        # Employer — an object, not a string; only its name belongs in `company`
+        employer = employer_name(item.get("employer") or item.get("employerName"))
 
         # Description from snippet/summary
         description = item.get("description") or item.get("snippet")
@@ -224,6 +248,50 @@ def _build_search_body(
         "sessionId": "jobscout-session",
         "requestLanguage": "en",
     }
+
+
+def employer_name(employer: Any) -> str | None:
+    """Pull a plain company name out of whatever EURES puts in `employer`.
+
+    EURES returns an object — {"name": ..., "legalID": ..., "sectorCodes": ...}
+    — and stringifying the whole thing put dict reprs in `company`, which is
+    the dedup key. Only the name is wanted.
+    """
+    if employer is None:
+        return None
+    if isinstance(employer, dict):
+        name = employer.get("name") or employer.get("employerName")
+        employer = name if name is not None else None
+    if employer is None:
+        return None
+    name = str(employer).strip()
+    return name or None
+
+
+def repair_company_value(stored: Any) -> tuple[str | None, str]:
+    """Repair one already-stored `company` value. Returns (value, outcome).
+
+    Outcome is 'clean' (nothing to do), 'repaired', or 'unparseable' — the last
+    leaves the value untouched rather than guessing at it.
+    """
+    if stored is None:
+        return None, "clean"
+    text = str(stored).strip()
+    if not text.startswith("{"):
+        return stored, "clean"
+
+    # Values were written with str(dict), so they are Python reprs (None, not
+    # null) — but try JSON too in case a source ever wrote real JSON.
+    for parse in (ast.literal_eval, json.loads):
+        try:
+            obj = parse(text)
+        except (ValueError, SyntaxError, TypeError):
+            continue
+        name = employer_name(obj)
+        if name:
+            return name, "repaired"
+        return stored, "unparseable"   # parsed, but carried no usable name
+    return stored, "unparseable"
 
 
 def _map_experience(months: Any) -> str | None:

@@ -12,12 +12,10 @@ from jobscout.db import init_db, migrate_m2, migrate_m3, insert_jobs_bulk, upser
 from jobscout.embedder import to_blob, from_blob
 from jobscout.matching import (
     build_facet_text,
-    score_seniority,
     cosine_similarity,
     passes_filters,
     score_job,
     run_matching,
-    SENIORITY_ORDER,
 )
 from jobscout.profiles import RuleBasedExtractor
 
@@ -206,31 +204,8 @@ class TestUtilities:
 # Test: seniority scoring
 # ---------------------------------------------------------------------------
 
-class TestSeniorityScoring:
-    def test_exact_match(self):
-        assert score_seniority("mid", "mid") == 1.0
-
-    def test_one_step(self):
-        assert score_seniority("mid", "senior") == 0.85
-        assert score_seniority("senior", "mid") == 0.85
-
-    def test_two_steps(self):
-        assert score_seniority("junior", "senior") == 0.6
-
-    def test_three_steps(self):
-        # junior(1) -> lead(4)
-        assert score_seniority("junior", "lead") == 0.4
-        assert score_seniority("intern", "senior") == 0.4
-
-    def test_four_plus_steps(self):
-        # Everything at distance >= 4 bottoms out at the same floor
-        assert score_seniority("intern", "lead") == 0.3
-        assert score_seniority("junior", "principal") == 0.3
-        assert score_seniority("intern", "principal") == 0.3
-
-    def test_unknown_defaults_to_junior(self):
-        # Unknown maps to index 1 (junior)
-        assert score_seniority("unknown", "junior") == 1.0
+# The bucket ladder (score_seniority / SENIORITY_ORDER) was replaced in M7b by
+# years arithmetic. Its tests moved to tests/test_m7b.py.
 
 
 # ---------------------------------------------------------------------------
@@ -310,7 +285,6 @@ class TestScoreJob:
         result = score_job(
             profile_skills_emb=vec, profile_domain_emb=vec,
             job_skills_emb=vec, job_domain_emb=vec,
-            profile_seniority="mid", job_seniority="mid",
             profile_skills=["python"], job_skills=["python"],
         )
         assert result["final_score"] == pytest.approx(1.0, abs=1e-3)
@@ -323,12 +297,11 @@ class TestScoreJob:
         result = score_job(
             profile_skills_emb=vec, profile_domain_emb=vec,
             job_skills_emb=vec, job_domain_emb=vec,
-            profile_seniority="junior", job_seniority="junior",
             profile_skills=[], job_skills=[],
             weights=weights,
         )
-        # Matching seniority => neutral 1.0 multiplier, so the final score is
-        # the weighted base alone: all weight on a perfect skills match.
+        # No seniority verdict passed => neutral 1.0 multiplier, so the final
+        # score is the weighted base alone: all weight on a perfect skills match.
         assert result["seniority_multiplier"] == 1.0
         assert result["final_score"] == pytest.approx(result["skills_score"], abs=1e-3)
         assert result["final_score"] == pytest.approx(1.0, abs=1e-3)
@@ -339,7 +312,6 @@ class TestScoreJob:
         result = score_job(
             profile_skills_emb=vec, profile_domain_emb=vec,
             job_skills_emb=vec, job_domain_emb=vec,
-            profile_seniority="mid", job_seniority="mid",
             profile_skills=["python", "pytorch"],
             job_skills=["react", "typescript"],
         )

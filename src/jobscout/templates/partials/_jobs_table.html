@@ -50,10 +50,46 @@
                    hx-trigger="keyup changed delay:300ms">
         </label>
     </div>
+
+    <!-- Delisted postings: kept, flagged, and hideable. Off by default —
+         a job you can no longer apply to is noise in a ranked list. -->
+    <label>
+        <input type="checkbox" name="show_delisted" value="true" role="switch"
+               {{ 'checked' if show_delisted }}>
+        Show delisted
+        <small>
+            {% if delisted_count %}
+                &mdash; {{ delisted_count }} posting{{ 's' if delisted_count != 1 }}
+                no longer live at the source
+            {% else %}
+                &mdash; none found
+            {% endif %}
+        </small>
+    </label>
+
+    <!-- Stretch roles: hidden by default, but never silently -->
+    <label>
+        <input type="checkbox" name="show_stretch" value="true" role="switch"
+               {{ 'checked' if show_stretch }}>
+        Show stretch roles
+        <small>
+            {% if stretch_count %}
+                &mdash; {{ stretch_count }} job{{ 's' if stretch_count != 1 }}
+                need{{ '' if stretch_count != 1 else 's' }} more years than you have
+            {% else %}
+                &mdash; none hidden
+            {% endif %}
+        </small>
+    </label>
 </form>
 
 <!-- Results count -->
-<small>{{ jobs | length }} jobs found</small>
+<small>
+    {{ jobs | length }} jobs found
+    {% if stretch_count and not show_stretch %}
+        &middot; <strong>{{ stretch_count }} hidden</strong> as stretch roles
+    {% endif %}
+</small>
 
 <!-- Table -->
 <figure>
@@ -87,7 +123,15 @@
                     <span class="score-badge score-low">{{ score_pct }}%</span>
                 {% endif %}
             </td>
-            <td>{{ job.title }}</td>
+            <td>
+                {{ job.title }}
+                {% if job.is_stretch %}
+                    <span class="status-pill" title="Requires more years than your profile has">stretch</span>
+                {% endif %}
+                {% if job.delisted_at %}
+                    <span class="status-pill" title="This posting 404s at the source — it has been taken down">delisted</span>
+                {% endif %}
+            </td>
             <td>{{ job.company or "—" }}</td>
             <td>
                 {% if job.org_type %}

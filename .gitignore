@@ -1,10 +1,44 @@
-
 __pycache__/
 *.py[cod]
 .pytest_cache/
 *.egg-info/
 .venv/
 my_env/
+
+# Secrets and personal data. Nothing here should ever reach a commit.
 .env
+.env.*
+!.env.example
+
+# CVs and anything derived from one. Kept broad on purpose: the CV is the most
+# personal file in the project and an exact-filename rule misses cv (1).pdf.
 cv.pdf
+*cv*.pdf
+*cv*.docx
+*resume*.pdf
+*resume*.docx
+*.cv.json
+profile_export*.json
+profiles_export*.json
+
+# SQLite database and its write-ahead log sidecars. The -wal and -shm files are
+# regenerated on every open and are meaningless without the .db.
 jobscout.db
+jobscout.db-wal
+jobscout.db-shm
+*.sqlite
+*.sqlite3
+
+# Database snapshots taken before destructive maintenance (VACUUM INTO), e.g.
+# the pre-prune copy.
+*_preprune.db
+*_backup.db
+*.db.bak
+
+# Diagnostic and measurement output.
+scripts/out/
+
+# Working dumps generated for hand-labelling the gold set. Regenerate rather
+# than commit — they are derived from the DB and go stale immediately.
+tests/eval/stubs_to_label.txt
+tests/eval/*_to_label.txt

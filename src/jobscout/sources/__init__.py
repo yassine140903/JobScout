@@ -6,6 +6,7 @@ import copy
 import hashlib
 import json
 import logging
+import re
 import sqlite3
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -15,6 +16,7 @@ from typing import Any
 import httpx
 
 from jobscout.db import find_by_dedup_hash
+from jobscout.textclean import clean_description
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,17 @@ class RawPosting:
     posted_at: str | None = None
     source_id: str | None = None
     raw_data: dict | None = None
+    # M7b: structured requirements. Adapters that cannot supply these leave them
+    # None — a missing requirement is not a requirement of zero.
+    required_years_min: float | None = None   # minimum years of experience
+    education_level: str | None = None        # source enum, e.g. "BAC_5"
+    salary_yearly_min: int | None = None
+    salary_currency: str | None = None
+    seniority_source: str | None = None       # 'api' when the source stated it
+    # M7d: which text the description came from, and whether the posting is
+    # still reachable. Adapters with a single description path leave both None.
+    description_source: str | None = None     # 'detail' | 'blurb' | 'none'
+    delisted_at: str | None = None            # set when the posting 404s
 
 
 # ---------------------------------------------------------------------------
@@ -140,35 +153,75 @@ def classify_org_type(
 # Position-type classification
 # ---------------------------------------------------------------------------
 
+# Matched on word boundaries, not as bare substrings. As substrings, "intern"
+# matched "internal" and "international", and "mission" matched ordinary prose
+# ("notre mission est de..."), which classified two senior engineering roles as
+# internships. Inflections that matter are spelled out rather than left to a
+# prefix match, because a prefix match is what caused the bug.
 _INTERNSHIP_KEYWORDS = {
-    "intern", "internship", "stage", "stagiaire", "werkstudent",
-    "working student", "apprentice", "apprenticeship", "alternance",
-    "alternant", "praktikum", "trainee",
+    # EN
+    "intern", "interns", "internship", "internships",
+    "apprentice", "apprentices", "apprenticeship", "apprenticeships",
+    "trainee", "trainees", "working student", "placement student",
+    # FR
+    "stage", "stages", "stagiaire", "stagiaires",
+    "alternance", "alternant", "alternante", "alternants", "alternantes",
+    "apprenti", "apprentie", "apprentis", "apprenties",
+    # DE
+    "praktikum", "praktika", "praktikant", "praktikantin",
+    "werkstudent", "werkstudentin", "auszubildende", "ausbildung",
 }
 
 _FREELANCE_KEYWORDS = {
-    "freelance", "freelancer", "contractor", "independent",
-    "self-employed", "consultant indépendant", "mission",
-    "contract position", "1099", "free-lance",
+    # EN
+    "freelance", "freelancer", "freelancers", "free-lance",
+    "contractor", "contractors", "self-employed", "contract position",
+    "independent contractor", "1099",
+    # FR. Bare "mission" is deliberately absent: every consultancy posting says
+    # "notre mission", and it classified staff jobs as freelance.
+    "freelances", "consultant indépendant", "consultante indépendante",
+    "travailleur indépendant", "auto-entrepreneur", "portage salarial",
+    # DE
+    "freiberuflich", "freiberufler", "selbständig", "selbstständig",
 }
+
+
+def _keyword_pattern(keywords: set[str]) -> re.Pattern[str]:
+    """One alternation over a keyword set, word-bounded and hyphen-tolerant."""
+    alternatives = sorted(
+        (r"[\s\-]+".join(re.escape(part) for part in kw.split()) for kw in keywords),
+        key=len,
+        reverse=True,          # longest first, so "internship" wins over "intern"
+    )
+    return re.compile(r"\b(?:" + "|".join(alternatives) + r")\b", re.IGNORECASE)
+
+
+_INTERNSHIP_RE = _keyword_pattern(_INTERNSHIP_KEYWORDS)
+_FREELANCE_RE = _keyword_pattern(_FREELANCE_KEYWORDS)
 
 
 def classify_position_type(
     title: str | None,
     description: str | None,
 ) -> str:
-    """Classify a job as 'internship', 'freelance', or 'job' (default)."""
-    title_lower = (title or "").lower()
-    desc_lower = (description or "").lower()
+    """Classify a job as 'internship', 'freelance', or 'job' (default).
 
-    for kw in _INTERNSHIP_KEYWORDS:
-        if kw in title_lower or kw in desc_lower:
-            return "internship"
+    Title markers are checked before description markers, so a title saying
+    "Freelance" is not overridden by the word "stage" further down the body.
+    A marker that appears only in the description still classifies, as before -
+    this pass changed how the keywords match, not where they are looked for.
+    """
+    title_text = title or ""
+    description_text = description or ""
 
-    for kw in _FREELANCE_KEYWORDS:
-        if kw in title_lower or kw in desc_lower:
-            return "freelance"
-
+    if _INTERNSHIP_RE.search(title_text):
+        return "internship"
+    if _FREELANCE_RE.search(title_text):
+        return "freelance"
+    if _INTERNSHIP_RE.search(description_text):
+        return "internship"
+    if _FREELANCE_RE.search(description_text):
+        return "freelance"
     return "job"
 
 
@@ -190,8 +243,15 @@ def compute_url_hash(url: str | None) -> str | None:
 
 
 def normalize(raw: RawPosting) -> dict[str, Any]:
-    """Convert a RawPosting to a dict ready for job insertion."""
-    
+    """Convert a RawPosting to a dict ready for job insertion.
+
+    Descriptions are cleaned here so every posting is stored as structured
+    plain text regardless of which adapter produced it.
+    """
+    description = clean_description(raw.description) or None
+
+    # Classify on the cleaned text: keyword checks should not have to see
+    # through style attributes and entity escapes.
     return {
         "source": raw.source,
         "source_id": raw.source_id,
@@ -199,7 +259,7 @@ def normalize(raw: RawPosting) -> dict[str, Any]:
         "url_hash": compute_url_hash(raw.url),
         "title": raw.title,
         "company": raw.company,
-        "description": raw.description,
+        "description": description,
         "location": raw.location,
         "country": raw.country,
         "language": raw.language,
@@ -207,8 +267,15 @@ def normalize(raw: RawPosting) -> dict[str, Any]:
         "posted_at": raw.posted_at,
         "raw_data": json.dumps(raw.raw_data) if raw.raw_data else None,
         "dedup_hash": compute_dedup_hash(raw.title, raw.company),
-        "org_type": classify_org_type(raw.company, raw.title, raw.description),
-        "position_type": classify_position_type(raw.title, raw.description),
+        "org_type": classify_org_type(raw.company, raw.title, description),
+        "position_type": classify_position_type(raw.title, description),
+        "required_years_min": raw.required_years_min,
+        "education_level": raw.education_level,
+        "salary_yearly_min": raw.salary_yearly_min,
+        "salary_currency": raw.salary_currency,
+        "seniority_source": raw.seniority_source,
+        "description_source": raw.description_source,
+        "delisted_at": raw.delisted_at,
     }
 
 
@@ -335,11 +402,16 @@ def _insert_job(conn: sqlite3.Connection, job: dict[str, Any]) -> bool:
         INSERT OR IGNORE INTO jobs
             (source, source_id, url, url_hash, title, company, description,
              location, country, language, seniority, posted_at, raw_data,
-             dedup_hash, org_type, position_type)
+             dedup_hash, org_type, position_type,
+             required_years_min, education_level, salary_yearly_min,
+             salary_currency, seniority_source, description_source, delisted_at)
         VALUES
             (:source, :source_id, :url, :url_hash, :title, :company,
              :description, :location, :country, :language, :seniority,
-             :posted_at, :raw_data, :dedup_hash, :org_type, :position_type)
+             :posted_at, :raw_data, :dedup_hash, :org_type, :position_type,
+             :required_years_min, :education_level, :salary_yearly_min,
+             :salary_currency, :seniority_source, :description_source,
+             :delisted_at)
     """
     cur = conn.execute(sql, job)
     return cur.rowcount > 0

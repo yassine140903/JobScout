@@ -10,7 +10,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from jobscout.db import (
-    init_db, migrate_m2, migrate_m3, migrate_m4, migrate_m5, migrate_m6,
+    init_db, migrate_m2, migrate_m3, migrate_m4, migrate_m5, migrate_m6, migrate_m7b,
+    migrate_m7d,
     find_by_dedup_hash,
 )
 from jobscout.sources import (
@@ -36,6 +37,8 @@ def db(tmp_path: Path) -> sqlite3.Connection:
     migrate_m4(conn)
     migrate_m5(conn)
     migrate_m6(conn)
+    migrate_m7b(conn)
+    migrate_m7d(conn)
     return conn
 
 
@@ -379,10 +382,14 @@ class TestWTTJParsing:
             },
             "published_at": "2026-08-01T00:00:00.000+02:00",
             "contract_type_names": {"en": "Full-Time"},
-            "experience_level_minimum": "3_TO_5_YEARS",
+            "has_experience_level_minimum": True,
+            "experience_level_minimum": 3,
             "language": "en",
-            "profile": {"en": "We are looking for a senior ML engineer."},
-            "recruitment_process": {"en": "3 rounds of interviews."},
+            # M7d: `profile` is a flat string on every hit in this index, and
+            # `recruitment_process` is not a key at all. This fixture used to
+            # assert the per-language dict shape the adapter defended against
+            # — a defence for a schema WTTJ has never served.
+            "profile": "We are looking for a senior ML engineer.",
         }
 
         posting = WTTJAdapter._hit_to_posting(hit)
@@ -393,8 +400,13 @@ class TestWTTJParsing:
         assert posting.location == "Paris"
         assert posting.source == "wttj"
         assert posting.source_id == "12345"
-        assert posting.seniority == "mid"
+        # M7b: years, not a bucket. The bucket field is no longer guessed at.
+        assert posting.required_years_min == 3.0
+        assert posting.seniority_source == "api"
+        assert posting.seniority is None
         assert "senior ML engineer" in posting.description
+        # The blurb is what the index gives; the detail fetch overwrites it.
+        assert posting.description_source == "blurb"
         assert "https://www.welcometothejungle.com/en/companies/deeptech/jobs/senior-ml-engineer_paris" == posting.url
 
     def test_hit_missing_title_returns_none(self):
@@ -402,16 +414,6 @@ class TestWTTJParsing:
 
         assert WTTJAdapter._hit_to_posting({}) is None
         assert WTTJAdapter._hit_to_posting({"name": ""}) is None
-
-    def test_seniority_mapping(self):
-        from jobscout.sources.wttj import _map_seniority
-
-        assert _map_seniority("LESS_THAN_6_MONTHS") == "intern"
-        assert _map_seniority("1_TO_2_YEARS") == "junior"
-        assert _map_seniority("3_TO_5_YEARS") == "mid"
-        assert _map_seniority("5_TO_10_YEARS") == "senior"
-        assert _map_seniority("MORE_THAN_10_YEARS") == "lead"
-        assert _map_seniority(None) is None
 
 
 # ---------------------------------------------------------------------------

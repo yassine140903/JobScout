@@ -47,7 +47,78 @@
             </div>
             {% endfor %}
         </div>
+
+        <!-- Where the seniority number came from, so a guess reads as a guess -->
+        {% if seniority_detail %}
+        <p style="margin-top: 0.75em;">
+            <small>
+                {% if seniority_detail.source == 'none' %}
+                    <strong>Seniority:</strong> no experience requirement in the posting's
+                    structured fields or its wording, and none inferable from the title
+                    &mdash; scored neutral, never filtered.
+                {% else %}
+                    <strong>Requires:</strong> {{ seniority_detail.required_years }} years
+                    {% if seniority_detail.candidate_years is not none %}
+                        &middot; <strong>you have:</strong> {{ seniority_detail.candidate_years }}
+                        &middot; <strong>gap:</strong>
+                        {{ '%+g' % seniority_detail.gap }} years
+                    {% else %}
+                        &middot; your years are not set, so no gap was applied
+                    {% endif %}
+                    <br>
+                    <strong>Source:</strong>
+                    {% if seniority_detail.source == 'api' %}
+                        <mark title="Stated by the job board as structured data">stated by the source
+                        &mdash; a structured field on the posting</mark>
+                    {% elif seniority_detail.source == 'description' %}
+                        <mark title="Read out of the posting's own wording">stated in the description
+                        &mdash; read from the posting's wording</mark>
+                    {% else %}
+                        <span title="Guessed from wording in the job title">inferred from the title
+                        &mdash; treat as approximate, and never filtered on</span>
+                    {% endif %}
+                    {# The exact words the parser matched, so a bad match is
+                       visible rather than silently scoring the job down. #}
+                    {% if seniority_detail.source == 'description' and seniority_detail.snippet %}
+                        <br><strong>Matched text:</strong>
+                        <q><em>{{ seniority_detail.snippet }}</em></q>
+                    {% endif %}
+                    {% if seniority_detail.filtered %}
+                        <br><strong>Stretch role:</strong> beyond the years gate; hidden unless
+                        &ldquo;show stretch roles&rdquo; is on.
+                    {% endif %}
+                {% endif %}
+            </small>
+        </p>
+        {% endif %}
     </details>
+    {% endif %}
+
+    <!-- Which text this job was actually scored on -->
+    {% if job.description_source and job.description_source != 'detail' %}
+    <p><small>
+        {% if job.description_source == 'blurb' %}
+            <strong>Note:</strong> scored on the job board's short requirements
+            summary, not the full posting &mdash; the full text could not be fetched.
+        {% else %}
+            <strong>Note:</strong> this posting has no description text at all,
+            so skills and seniority could only be read from its title.
+        {% endif %}
+    </small></p>
+    {% endif %}
+
+    <!-- Stated requirements and compensation -->
+    {% if job.education_level or job.salary_yearly_min %}
+    <div style="margin-bottom: 1em;">
+        {% if job.salary_yearly_min %}
+            <strong>Salary from:</strong>
+            {{ '{:,}'.format(job.salary_yearly_min) }} {{ job.salary_currency or '' }}/year
+        {% endif %}
+        {% if job.education_level %}
+            {% if job.salary_yearly_min %}&middot;{% endif %}
+            <strong>Education:</strong> {{ job.education_level.replace('_', '+') }}
+        {% endif %}
+    </div>
     {% endif %}
 
     <!-- Matched skills -->
@@ -70,7 +141,16 @@
         Source: {{ job.source }}
         {% if job.posted_at %} &middot; Posted: {{ job.posted_at }} {% endif %}
         {% if job.url %}
-            &middot; <a href="{{ job.url }}" target="_blank" rel="noopener">View original</a>
+            {# A posting whose detail endpoint 404s no longer exists. Showing
+               the link as if it were live is worse than showing none. #}
+            {% if job.delisted_at %}
+                &middot; <span title="This posting 404s at the source — it has been taken down">
+                    original no longer available
+                </span>
+                &middot; <a href="{{ job.url }}" target="_blank" rel="noopener"><small>try anyway</small></a>
+            {% else %}
+                &middot; <a href="{{ job.url }}" target="_blank" rel="noopener">View original</a>
+            {% endif %}
         {% endif %}
     </small>
 

@@ -1,0 +1,1135 @@
+# Gold set for skill-extraction evaluation.
+#
+# Re-seeded against the post-M7d corpus: every WTTJ description here is the
+# real posting text from the detail endpoint, not the ~1KB requirements blurb
+# the Algolia index carries. The earlier scaffold sampled a distribution that
+# no longer exists.
+#
+# LABELLED entries (non-empty expected_skills) are hand-written and are never
+# regenerated - scripts/make_gold_set.py preserves them verbatim, at the top,
+# and replaces only the unlabelled ones.
+#
+#   expected_skills             list of skill strings the extractor should find.
+#                               [] on a non-technical role is a real label: an
+#                               extractor that invents skills there is failing.
+#   expected_required_years_min minimum years the posting demands, or null when
+#                               it states none. null is an assertion, not a
+#                               blank - the parser must return None.
+#   relevance                   yes | no | borderline - is this a job worth
+#                               surfacing to this profile at all?
+#   expected_education_level    e.g. "bac+5", or null.
+#
+# `category` says why the entry is in the set: zero_skills is the recall gap,
+# rich_skills is regression detection, non_technical must extract nothing.
+# `seniority_hint`, `category`, `excerpt_is_requirements` and
+# `description_excerpt` are context for labelling and are not scored.
+#
+# Score with:  uv run python tests/eval/run_eval.py
+entries:
+- job_id: 64
+  title: Formateur•rice Data / Python & développement IA
+  company: SIMPLON corporate
+  language: fr
+  seniority_hint: mid
+  description_excerpt: 'Compétences techniques spécifiques pour ce poste : Développement en Python, Java
+    ou Scala. Bases de données SQL et NoSQL (PostgreSQL, MongoDB, Snowflake, BigQuery, Hive). Conception
+    de pipelines de données et processus ETL/ELT (Airflow, Talend, Kafka, Flink). Expérience professionnelle
+    significative en Data Engineering et/ou Développement IA.'
+  expected_skills:
+  - python
+  - java
+  - scala
+  - sql
+  - postgresql
+  - mongodb
+  - snowflake
+  - bigquery
+  - hive
+  - airflow
+  - talend
+  - kafka
+  - flink
+  - etl
+  - data warehouse
+  - data lake
+  - flask
+  - django
+  - scikit-learn
+  - tensorflow
+  - pytorch
+  - keras
+  - machine learning
+  - deep learning
+  - mlops
+  - agile
+  - scrum
+  - elt
+  - model serving
+  expected_required_years_min: null
+  relevance: 'no'
+  expected_education_level: null
+  category: hand_labelled
+- job_id: 260
+  title: Architect Cloud et Data H/F
+  company: Crédit Agricole corporate
+  language: fr
+  seniority_hint: senior
+  description_excerpt: 'Langages et scripts : Python, Shell / Bash, YAML / JSON, Go/TypeScript. Cloud
+    & API : AWS/GCP. Conteneurisation : Docker, Kubernetes, OpenShift. IaC : Terraform, Ansible, CloudFormation.
+    Big Data (Spark, Kafka, Flink). MLOps (MLflow, Kubeflow, SageMaker).'
+  expected_skills:
+  - python
+  - bash
+  - yaml
+  - json
+  - go
+  - typescript
+  - aws
+  - gcp
+  - docker
+  - kubernetes
+  - openshift
+  - terraform
+  - ansible
+  - cloudformation
+  - gitlab ci
+  - jenkins
+  - argocd
+  - cloudwatch
+  - elasticsearch
+  - grafana
+  - prometheus
+  - opentelemetry
+  - dynatrace
+  - data lake
+  - lakehouse
+  - data mesh
+  - spark
+  - kafka
+  - flink
+  - postgresql
+  - mongodb
+  - airflow
+  - dagster
+  - step functions
+  - data governance
+  - data quality
+  - machine learning
+  - tensorflow
+  - pytorch
+  - scikit-learn
+  - mlflow
+  - kubeflow
+  - sagemaker
+  - cloud architecture
+  - ci/cd
+  - iac
+  - mlops
+  - data warehouse
+  - shell
+  expected_required_years_min: 3
+  relevance: 'no'
+  expected_education_level: null
+  category: hand_labelled
+- job_id: 137
+  title: Machine Learning Engineer – Practice IA
+  company: MARGO corporate
+  language: fr
+  seniority_hint: mid
+  description_excerpt: 'Maîtrise avancée de Python et des bonnes pratiques logicielles (Git, Tests unitaires,
+    Packaging). Solide expérience sur les plateformes Cloud (AWS, Azure ou GCP) et l''IaC (Terraform).
+    Maîtrise de l''écosystème MLOps : MLflow, Kubeflow, Docker, Kubernetes. Vous avez une expérience significative
+    dans le déploiement de modèles ML en production.'
+  expected_skills:
+  - python
+  - git
+  - fastapi
+  - flask
+  - docker
+  - kubernetes
+  - ci/cd
+  - airflow
+  - kubeflow
+  - dagster
+  - dvc
+  - mlflow
+  - aws
+  - azure
+  - gcp
+  - terraform
+  - iac
+  - scikit-learn
+  - pandas
+  - tensorflow
+  - pytorch
+  - mlops
+  - model serving
+  - feature store
+  - data drift
+  - model monitoring
+  - tdd
+  - unit testing
+  - gpu
+  - machine learning
+  - deep learning
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+  category: hand_labelled
+- job_id: 1489
+  title: Machine Learning Engineer — ML, Python & MLOps
+  company: eXalt corporate
+  language: fr
+  seniority_hint: senior
+  description_excerpt: 'Vous êtes à l’interface entre les équipes Data, Software et Infrastructure, avec
+    une forte dimension MLOps / Ops. Vous aurez notamment pour missions de : Concevoir et développer des
+    solutions de Machine Learning répondant à des problématiques métier concrètes. Préparer, transformer
+    et exploiter les données nécessaires à l’entraînement des modèles. Expérimenter, entraîner et évaluer
+    différents modèles et approches. Industrialiser le cycle de vie des modèles, de l’expérimentation
+    au déploiement. D'
+  expected_skills:
+  - python
+  - machine learning
+  - scikit-learn
+  - pytorch
+  - tensorflow
+  - deep learning
+  - git
+  - linux
+  - mlops
+  - mlflow
+  - kubeflow
+  - docker
+  - kubernetes
+  - ci/cd
+  - terraform
+  - ansible
+  - iac
+  - aws
+  - azure
+  - gcp
+  - airflow
+  - feature store
+  - model monitoring
+  - model serving
+  - gpu
+  - distributed computing
+  expected_required_years_min: 3
+  relevance: null
+  expected_education_level: null
+  category: hand_labelled
+- job_id: 1039
+  title: Data & AI Architect (m/w/d) (Data-Analyst/in)
+  company: RENK GmbH
+  source: eures
+  language: de
+  seniority_hint: junior
+  category: zero_skills
+  excerpt_is_requirements: true
+  description_excerpt: 'Ihr Profil - **Qualifikation: **Sie verfügen über ein abgeschlossenes Studium
+    im Bereich Informationstechnologie oder vergleichbar - **Fachliche Expertise: **Sie haben ein sehr
+    gutes Verständnis von Datenarchitekturen (DWH, Lakehouse, Streaming) - Erfahrung mit Integrationsarchitekturen
+    und APIs - Kenntnisse in Cloud- und On-Prem-Architekturen - Erfahrung mit Datenmodellierung (z. B.
+    dimensional, semantisch) - Grundverständnis von IoT- und Produktionsdaten - fundiertes Verständnis
+    von Machine Le'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 1032
+  title: Data manager (H/F)
+  company: NEW NET 3D
+  source: eures
+  language: fr
+  seniority_hint: senior
+  category: zero_skills
+  excerpt_is_requirements: false
+  description_excerpt: 'Description du poste : En tant qu''organisateur de forums de recrutement, Talents
+    Handicap accompagne de très nombreuses entreprises & organisations en France dans leurs recrutements
+    de collaborateurs en situation de handicap. Participant actuellement à l''un de nos forums. L''entreprise
+    Atos recherche actuellement des profils Et si votre prochain défi data vous permettait de piloter
+    l''industrialisation de projets IA à grande échelle ? Dans le cadre du développement de nos activités
+    Data & Intellig'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 1498
+  title: '[Stage] Développeur Full Stack H/F'
+  company: Koncrete
+  source: wttj
+  language: de
+  seniority_hint: principal
+  category: zero_skills
+  excerpt_is_requirements: false
+  description_excerpt: 'Tu veux contribuer à transformer un secteur traditionnel avec des outils modernes
+    et agiles ? En tant que Développeur chez Koncrete, tu seras au cœur de l’innovation produit d’une
+    startup Construtech en hypercroissance. Aux côtés du CTO, nous recherchons plusieurs personnes motivées,
+    prêtes à avoir un impact concret, à progresser constamment et à partager leurs connaissances pour
+    faire grandir toute l’équipe. Tu contribueras activement à l’évolution de notre plateforme : Développement
+    de nouvell'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 21
+  title: Deep Learning Research Scientist - Foundation Model on Omics data
+  company: DeepLife
+  source: wttj
+  language: en
+  seniority_hint: junior
+  category: zero_skills
+  excerpt_is_requirements: true
+  description_excerpt: 'Qualifications (Ranked by Importance):** • **PhD or Postdoctoral Experience in
+    Computer Science:** Demonstrated expertise, evidenced by publications in top-tier machine learning
+    conferences (e.g., NIPS, ICLR, ICML, UAI, CVPR). • **Strong Foundation in Machine Learning/Applied
+    Mathematics:** Robust academic background in advanced ML techniques and applied mathematics. • **Experience
+    with Large-Scale Deep Learning Models:** Proven track record in building and scaling AI models, particularly
+    those '
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 78
+  title: Formateur Technique Produits (H/F)
+  company: Haier Europe
+  source: wttj
+  language: fr
+  seniority_hint: mid
+  category: zero_skills
+  excerpt_is_requirements: true
+  description_excerpt: 'compétences techniques de nos produits sur les périmètres des appareils de gros
+    électroménager, de petit électroménager et de la télévision ; Contribuer activement au développement
+    de notre offre Service, ainsi qu’à la promotion de nos 4 marques en France (Candy, Hoover, Rosières,
+    Haier), avec une approche #zérodistance. Votre rôle ? Animation & Conduite de formations produits
+    Animer et déployer le plan de formation aux différents réseaux d’intervenants en phase avec les objectifs
+    du Groupe ; Ré'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 1127
+  title: Systemadministrator (w/m/d) - Schwerpunkt Internes Mailsystem & Microsoft 365 (IT-Systemadministrator/in)
+  company: United Internet AG
+  source: eures
+  language: de
+  seniority_hint: junior
+  category: zero_skills
+  excerpt_is_requirements: true
+  description_excerpt: Anforderungen im Enterprise-Umfeld und setzen diese zielgerichtet um. - Sie entwickeln
+    unsere Microsoft-365-Plattform im Zusammenspiel mit bestehenden Infrastrukturen weiter und bewerten
+    sowie ermöglichen den Einsatz neuer Technologien im Microsoft-365-Umfeld. - Sie beraten Fachbereiche
+    bei der Auswahl und Nutzung moderner Kommunikations- und Collaboration-Lösungen. - Sie identifizieren
+    Optimierungspotenziale in bestehenden Systemen und Prozessen und setzen entsprechende Verbesserungsmaßnahmen
+    u
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 1057
+  title: ENGINEERING MANAGER SENIOR SPÉCIFICITÉ - PROJET ALLIANCE (H/F)
+  company: CHU de Montpellier
+  source: eures
+  language: fr
+  seniority_hint: senior
+  category: zero_skills
+  excerpt_is_requirements: false
+  description_excerpt: 'Grade Grille de référence: IH Type de contrat: Contractuels acceptés Pourcentage
+    d''activité: 100% DÉFINITION : L''Engineering Manager technique coordonne et structure l''équipe Ingénierie
+    IA & Plateformes de la Direction de l''IA du CHU de Montpellier. Son rôle principal est de mettre
+    en place, organiser, animer et faire grandir une équipe technique pluridisciplinaire chargée de construire,
+    industrialiser, exploiter et faire évoluer les plateformes Data-IA du CHU, en lien avec les partenaires
+    de l'''
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 117
+  title: Graduate Expert Engineer – Anaerobic Digestion
+  company: SUEZ
+  source: wttj
+  language: en
+  seniority_hint: principal
+  category: zero_skills
+  excerpt_is_requirements: true
+  description_excerpt: 'SKILLS AND EXPERIENCES YOU WILL NEED TO SUCCEED IN THIS ROLE ? JOB.MINIMUM.QUALIFICATIONS
+    BU: CUSTOM.BUSINESSUNIT CATEGORY: CUSTOM.EMPLOYEECATEGORY About SUEZ SUEZ is a global leader in environmental
+    services, supporting public and private sector clients in water and waste management. Through innovative
+    and resilient solutions, SUEZ helps communities and industries protect natural resources, improve
+    performance, and address increasingly complex environmental challenges. About the Graduate Expert'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 135
+  title: Stage Ingénieur Ouvrier - IA - Machine Learning 2026
+  company: Diduenjoy
+  source: wttj
+  language: fr
+  seniority_hint: junior
+  category: zero_skills
+  excerpt_is_requirements: false
+  description_excerpt: 'Quelques informations à l’intention des candidats : Il ne s’agit pas d’une offre
+    d’alternance. Il ne s’agit pas d’une offre pour un stage de développement mais d’un stage ouvrier.
+    Il ne s’agit pas d’une offre pour un stage de fin d’étude. Les candidatures pour l’un de ces points
+    ne seront pas traitées \****** Diduenjoy récolte chaque mois des verbatims pour le compte de ses entreprises
+    clientes. Ces données “non structurées” où les consommateurs expriment avec leurs propres mots sont
+    une mine d’'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 1912
+  title: Chief Information Officer (CIO) / Gesamtleitung IT & Digitale Transformation (m/w/d) (Chief-Digital-Officer)
+  company: UGOS GmbH & Co. KG Holding
+  source: eures
+  language: de
+  seniority_hint: principal
+  category: zero_skills
+  excerpt_is_requirements: true
+  description_excerpt: 'Anforderungen im Krankenhaus und Rehabilitationsbereich sowie idealerweise auch
+    von ambulanten Gesundheitseinrichtungen aus eigener Erfahrung und Verantwortung. Darüber hinaus verfügen
+    Sie über: - ein abgeschlossenes Studium der (Wirtschafts-)Informatik, Betriebswirtschaft mit IT-Schwerpunkt
+    oder eine vergleichbare Qualifikation - mindestens fünf Jahre relevante Berufs- und Führungserfahrung
+    im IT-Umfeld, idealerweise in komplexen IT-Organisationen - nachgewiesene Erfahrung in der IT eines
+    Krank'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 2091
+  title: Engineering professionals (excluding electrotechnology)
+  company: GI GROUP S.P.A.
+  source: eures
+  language: it
+  seniority_hint: junior
+  category: zero_skills_canary
+  excerpt_is_requirements: false
+  description_excerpt: 'GI GROUP filiale di Assago ricerca Per azienda cliente multinazionale operante
+    nel settore logistico selezioniamo: OPERATION ADMINISTRATION Di cosa ti occuperai? Inserita all''interno
+    del team Operation, la risorsa contribuirà al supporto per l''organizzazione dei trasporti Le principali
+    attività saranno: Supportare il team nell''organizzazione e pianificazione dei viaggi e delle dirette,
+    garantendo il caricamento dei dati sul sistema interno utilizzato; Gestire le attività di prenotazione
+    dei mezz'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 950
+  title: Project Engineer Regeltechniek
+  company: Square City BV
+  source: eures
+  language: nl
+  seniority_hint: junior
+  category: zero_skills_canary
+  excerpt_is_requirements: false
+  description_excerpt: 'De verantwoordelijkheden voor deze functie zijn: Je staat in voor de studie en
+    het uitwerken van het regeltechnische gedeelte van HVAC-installaties. Je vraagt prijzen op en bestelt
+    de nodige materialen. Je voert P&ID-controles uit en bewaakt de technische correctheid. Je ondersteunt
+    elektriciens op de werven met technische informatie en uitgewerkte regelplannen. Je controleert en
+    volgt werkingsbeschrijvingen op met focus op energiezuinige technieken en minimaal energieverbruik.
+    Je neemt regelsys'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 1038
+  title: Senior Fullstack Developer - Java, React, Python (w/m/d) (Softwareentwickler/in)
+  company: dmTECH GmbH
+  source: eures
+  language: de
+  seniority_hint: senior
+  category: rich_skills
+  excerpt_is_requirements: true
+  description_excerpt: Das bringst Du mit • Mehrjährige Berufserfahrung in der Fullstack-Entwicklung mit
+    Schwerpunkt Java, React und Python • Fundierte Kenntnisse in REST APIs und Microservices mit FastAPI
+    oder Spring Boot sowie asynchronen Services • Erfahrung mit LLM-Integration, NLP, ML-Modellen und
+    MLOps inkl. Model Serving & Monitoring sowie sicherer Umgang mit PostgreSQL, BigQuery und Data Pipelines
+    • Routinierter Umgang mit Google Cloud, Docker, Infrastructure as Code (Terraform / OpenTofu) sowie
+    CI/CD und Moni
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 102
+  title: 'Test Automation Engineer Medior - eXalt Belgium '
+  company: eXalt
+  source: wttj
+  language: en
+  seniority_hint: senior
+  category: rich_skills
+  excerpt_is_requirements: true
+  description_excerpt: 'experienced Test Automation Engineers to join our growing community and support
+    key clients in Banking, Energy, Insurance, and the Public sector. Your mission is to design and implement
+    robust test automation strategies across digital platforms and APIs, ensuring release confidence and
+    accelerating delivery cycles in complex, high-impact environments. Key Responsibilities: Automation
+    Strategy: Design, implement, and maintain automated test suites for web applications and APIs. Framework
+    Engineer'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 29
+  title: Machine Learning Engineer H/F
+  company: The Adecco Group
+  source: wttj
+  language: fr
+  seniority_hint: lead
+  category: rich_skills
+  excerpt_is_requirements: true
+  description_excerpt: vous disposez de minimum 5 années d'expérience sur des fonctions d'ingénierie machine
+    learning, idéalement dans un environnement data-driven ou e-commerce. Vous maîtrisez Python (niveau
+    confirmé), le cycle de développement logiciel (build, livraison, production), Docker/Kubernetes, et
+    justifiez d'une expérience en déploiement de modèles sur cloud ou serveurs. Vous possédez des bases
+    en deep learning/machine learning, SQL, IA générative (Claude code), et êtes à l'aise avec les outils
+    de versionin
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 1404
+  title: Senior Back-end Java Developer
+  company: NTT DATA
+  source: wttj
+  language: it
+  seniority_hint: junior
+  category: rich_skills
+  excerpt_is_requirements: true
+  description_excerpt: 'skills: Almeno 5 anni di esperienza nello sviluppo back-end o full-stack; Ottima
+    conoscenza di Java SE 8/17 e versioni successive, nonché di Java EE 7 e Jakarta EE 8 (e successive),
+    comprese le tecnologie JPA, JSF, JAX-WS e JAX-RS; Esperienza nella configurazione di Application Server
+    (JBoss/Wildfly, WebLogic e simili) e Web Server (Tomcat e simili); Esperienza consolidata con architettura
+    a microservizi e distribuite; Ottima conoscenza del framework Quarkus; Ottima conoscenza del framework
+    Spri'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 76
+  title: Internship - Finance & Strategy (Jan 2027)
+  company: OVRSEA
+  source: wttj
+  language: en
+  seniority_hint: junior
+  category: non_technical
+  excerpt_is_requirements: true
+  description_excerpt: 'experience in a start-up or in finance is a plus, but not mandatory. Experienced
+    with ERP (ex: Pigment) or BI tools (ex: Metabase, Power BI, Sigma) is a plus, but not mandatory. Why
+    join us at OVRSEA? 💚 Take part in an incredible human adventure and in the revolution of international
+    freight, a complex and fascinating industry at the heart of global economic and geopolitical challenges.
+    Join a close-knit team with a genuine drive to learn and grow together. Work with autonomy and a high
+    degree o'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 47
+  title: Chargé (e) d'études Innovation Logistique en stage F/H
+  company: Auchan
+  source: wttj
+  language: fr
+  seniority_hint: junior
+  category: non_technical
+  excerpt_is_requirements: true
+  description_excerpt: 'Vous êtes… [ ingénieur Bac+5 : Vous avez la capacité de vous déplacer sur les
+    différents sites logistiques en France Vous avez une bonne communication (écrite et orale) et une
+    capacité de synthèse. Vous êtes autonome, organisé(e) et force de proposition. Vous avez le sens du
+    travail en équipe Vous êtes à l’aise avec le pack Office et les outils de la suite Google Vous avez
+    des bases solides en modèles IA (machine et deep learning, modèles prédictifs, …) Le poste de Stagiaire
+    Chargé(e) d''études F'
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 978
+  title: Junior Fleet Sales Advisor - Aalst
+  company: BMW Belgium Luxembourg NV
+  source: eures
+  language: nl
+  seniority_hint: junior
+  category: non_technical
+  excerpt_is_requirements: false
+  description_excerpt: Junior Fleet Sales Advisor - Meerschman - Aalst Wat doe je als Fleet Advisor bij
+    BMW? Jouw hoofdtaak bestaat uit het aangaan van contacten met Fleet- en KMO-klanten. Je vernieuwt
+    conventies, bezorgt referentieoffertes en maakt TCO oefeningen voor de klant. Als adviseur peil je
+    naar de behoeften van de fleetklant, denk je mee na over zijn wagenpark en kom je met passende voorstellen
+    en oplossingen met als doel de carpolicy te optimaliseren. De focus en prioriteit ligt op koude prospectie,
+    leadgen
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+- job_id: 82
+  title: Commercial Ops Manager, Indirect Distribution - M/F/X
+  company: Accor Tech & Digital
+  source: wttj
+  language: en
+  seniority_hint: lead
+  category: non_technical
+  excerpt_is_requirements: true
+  description_excerpt: experiences to our guests, hotels and staff across 110 countries and to shape the
+    future of hospitality. Accor Tech & Digital, jobs in the tech field where intelligence is above all
+    human! Job Description Accor Tech & Digital is the innovation and technological transformation lab
+    of the world leader in hospitality. Our teams, known as Heartists®, bring together the best of hospitality
+    with the best of tech and digital. Our ambition is to provide our customers with personalized, memorable,
+    and su
+  expected_skills: []
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: null
+
+- job_id: 1722
+  title: Data Engineer Junior
+  company: Eridanis
+  language: fr
+  expected_skills:
+    - python
+    - fastapi
+    - docker
+    - kubernetes
+    - prometheus
+    - grafana
+    - gitlab ci
+    - ci/cd
+    - etl
+    - flyte
+    - airflow
+    - dagster
+    - prefect
+    - mlops
+    - machine learning
+    - nlp
+    - llm
+    - iot
+    - mqtt
+    - amqp
+    - fiware
+    - ngsi-ld
+    - gpu
+    - data quality
+    - monitoring
+    - unit testing
+  expected_required_years_min: 0.5
+  relevance: null
+  expected_education_level: master
+  category: rich_skills
+
+
+- job_id: 1543
+  title: Ingénieur Full Stack Data/IA
+  company: Thales
+  language: fr
+  expected_skills:
+    - html
+    - css
+    - javascript
+    - typescript
+    - react
+    - vue.js
+    - angular
+    - java
+    - python
+    - spring boot
+    - fastapi
+    - rest api
+    - microservices
+    - docker
+    - kubernetes
+    - ci/cd
+    - grafana
+    - maven
+    - jenkins
+    - scikit-learn
+    - numpy
+    - pandas
+    - matplotlib
+    - plotly
+    - tensorflow
+    - pytorch
+    - machine learning
+    - deep learning
+    - nlp
+    - nltk
+    - hugging face
+    - llm
+    - generative ai
+    - influxdb
+    - mongodb
+    - postgresql
+    - elasticsearch
+    - opensearch
+    - s3
+    - git
+    - github
+    - unit testing
+    - monitoring
+  expected_required_years_min: null
+  relevance: null
+  expected_education_level: master
+  category: rich_skills
+
+
+
+- job_id: 1138
+  title: INGÉNIEUR MLOPS (H/F)
+  company: LIP
+  language: fr
+  expected_skills:
+    - python
+    - airflow
+    - kubeflow
+    - prefect
+    - gitlab ci
+    - github actions
+    - jenkins
+    - ci/cd
+    - docker
+    - kubernetes
+    - aws
+    - gcp
+    - azure
+    - mlflow
+    - dvc
+    - seldon
+    - feast
+    - feature store
+    - prometheus
+    - grafana
+    - mlops
+    - devops
+    - machine learning
+    - model monitoring
+    - data governance
+    - data quality
+  relevance: <fill>
+  expected_required_years_min: null
+  expected_education_level: null
+  category: rich_skills
+
+
+
+- job_id: 141
+  title: Machine Learning Engineer (H/F) | Stage
+  company: DataScientest
+  language: fr
+  expected_skills:
+    - python
+    - tensorflow
+    - pytorch
+    - scikit-learn
+    - docker
+    - kubernetes
+    - ci/cd
+    - mlops
+    - machine learning
+    - deep learning
+    - model serving
+    - model monitoring
+    - aws
+    - gcp
+    - azure
+    - cloud computing
+    - big data
+    - jupyter
+  relevance: <fill>
+  expected_required_years_min: 0.0
+  expected_education_level: null
+  category: rich_skills
+
+
+- job_id: 285
+  title: CONCEPTEUR DEVELOPPEUR
+  company: La Sécurité Sociale
+  language: fr
+  expected_skills:
+    - python
+    - scikit-learn
+    - pandas
+    - pytorch
+    - tensorflow
+    - fastapi
+    - machine learning
+    - llm
+    - prompt engineering
+    - postgresql
+    - mysql
+    - sql server
+    - sql
+    - linux
+    - git
+    - chatbot
+  relevance: <fill>
+  expected_required_years_min: 0.0
+  expected_education_level: associate
+  category: rich_skills
+
+
+- job_id: 706
+  title: Alternance Développeur Full Stack & Intelligence Artificielle H/F – Paris (75)
+  company: LIVECAMPUS
+  language: fr
+  expected_skills:
+    - javascript
+    - typescript
+    - react
+    - next.js
+    - node.js
+    - nestjs
+    - python
+    - fastapi
+    - rest api
+    - sql
+    - postgresql
+    - mongodb
+    - git
+    - github
+    - github actions
+    - docker
+    - azure
+    - openai api
+    - langchain
+    - nlp
+    - generative ai
+    - ci/cd
+    - agile
+  relevance: <fill>
+  expected_required_years_min: 0.0
+  expected_education_level: master
+  category: rich_skills
+
+
+
+- job_id: 1296
+  title: Backend Software Engineer (AI Squad)
+  company: Spendesk
+  language: en
+  expected_skills:
+    - typescript
+    - node.js
+    - react
+    - postgresql
+    - redis
+    - sqs
+    - kafka
+    - terraform
+    - iac
+    - kubernetes
+    - aws
+    - lambda
+    - step functions
+    - bedrock
+    - github actions
+    - ci/cd
+    - rest api
+    - llm
+    - machine learning
+    - model serving
+    - model monitoring
+    - distributed systems
+    - observability
+  relevance: <fill>
+  expected_required_years_min: null
+  expected_education_level: null
+  category: rich_skills
+
+- job_id: 98
+  title: ML Ops
+  company: Bluecoders
+  language: en
+  expected_skills:
+    - python
+    - gcp
+    - bigquery
+    - cloud run
+    - vertex ai
+    - iam
+    - docker
+    - kubernetes
+    - terraform
+    - iac
+    - ci/cd
+    - github actions
+    - grafana
+    - kafka
+    - spark
+    - scala
+    - elasticsearch
+    - tensorflow
+    - mlops
+    - machine learning
+    - model serving
+    - model monitoring
+    - a/b testing
+    - observability
+    - business intelligence
+  relevance: <fill>
+  expected_required_years_min: 5.0
+  expected_education_level: null
+  category: rich_skills
+
+
+- job_id: 1322
+  title: Software / Backend Engineer Apprentice
+  company: Implicity
+  language: en
+  expected_skills:
+    - typescript
+    - node.js
+    - nestjs
+    - angular
+    - aws
+    - docker
+    - kubernetes
+    - gitlab ci
+    - ci/cd
+    - prometheus
+    - grafana
+    - datadog
+    - mongodb
+    - mariadb
+    - postgresql
+    - glue
+    - dbt
+    - iceberg
+    - looker
+    - rabbitmq
+    - microservices
+    - rest api
+    - etl
+    - web scraping
+    - big data
+    - agile
+    - scrum
+    - observability
+  relevance: <fill>
+  expected_required_years_min: null
+  expected_education_level: bachelor
+  category: rich_skills
+
+
+- job_id: 31
+  title: Machine Learning Engineer – GenAI (F/H) stage
+  company: AXA
+  language: fr
+  expected_skills:
+    - python
+    - scikit-learn
+    - pandas
+    - numpy
+    - pytorch
+    - hugging face
+    - langchain
+    - pyspark
+    - spark
+    - azure ml
+    - azure
+    - databricks
+    - git
+    - mlops
+    - devops
+    - machine learning
+    - deep learning
+    - nlp
+    - llm
+    - transformers
+    - knowledge graph
+    - graph database
+    - agile
+  relevance: <fill>
+  expected_required_years_min: null
+  expected_education_level: master
+  category: rich_skills
+
+- job_id: 407
+  title: Data Software Engineer (F/H) (Alternance)
+  company: THE QUANTIC FACTORY
+  language: fr
+  expected_skills:
+    - gcp
+    - cloud run
+    - app engine
+    - iam
+    - firestore
+    - gcs
+    - scaleway
+    - ovh
+    - aws
+    - azure
+    - debian
+    - linux
+    - nomad
+    - tailscale
+    - clickhouse
+    - mysql
+    - mariadb
+    - s3
+    - sql
+    - grafana
+    - prometheus
+    - elasticsearch
+    - graylog
+    - fluentd
+    - golang
+    - rust
+    - c++
+    - node.js
+    - react
+    - docker
+    - python
+    - bash
+    - dbt
+    - airflow
+    - dagster
+    - devops
+    - data engineering
+    - observability
+    - tcp/ip
+    - dns
+    - http
+    - ssl
+  relevance: <fill>
+  expected_required_years_min: null
+  expected_education_level: master
+  category: rich_skills
+
+
+- job_id: 247
+  title: Stage de fin d'étude AI Engineer - F/H
+  company: EY
+  language: fr
+  expected_skills:
+    - python
+    - fastapi
+    - typescript
+    - node.js
+    - langchain
+    - llamaindex
+    - semantic kernel
+    - azure openai
+    - openai api
+    - mistral
+    - anthropic
+    - bedrock
+    - vertex ai
+    - azure ai search
+    - pgvector
+    - pinecone
+    - weaviate
+    - elasticsearch
+    - opensearch
+    - vector database
+    - rag
+    - embeddings
+    - llm
+    - generative ai
+    - machine learning
+    - data engineering
+    - git
+    - docker
+    - ci/cd
+    - github actions
+    - azure devops
+    - gitlab ci
+    - iam
+    - rest api
+    - model monitoring
+    - cursor
+  relevance: <fill>
+  expected_required_years_min: null
+  expected_education_level: master
+  category: rich_skills
+
+- job_id: 57
+  title: Data Scientist - Expertise IA - industrialisation et données sensibles
+  company: Ministère de l'Intérieur
+  language: fr
+  expected_skills:
+    - python
+    - sql
+    - git
+    - linux
+    - unix
+    - jupyter
+    - pandas
+    - numpy
+    - scikit-learn
+    - pytorch
+    - tensorflow
+    - machine learning
+    - deep learning
+    - nlp
+    - computer vision
+    - data science
+    - feature engineering
+    - model serving
+    - data quality
+    - tableau
+    - power bi
+    - data visualization
+    - statistics
+  relevance: <fill>
+  expected_required_years_min: null
+  expected_education_level: master
+  category: rich_skills
+
+
+- job_id: 292
+  title: Consultant·e Data et AI Engineer – Jeune diplômé·e (H/F)
+  company: Wavestone
+  language: fr
+  expected_skills:
+    - python
+    - spark
+    - kafka
+    - airflow
+    - azure
+    - aws
+    - gcp
+    - machine learning
+    - deep learning
+    - llm
+    - generative ai
+    - rag
+    - embeddings
+    - fine-tuning
+    - mlops
+    - llmops
+    - devops
+    - dataops
+    - ci/cd
+    - model monitoring
+    - data engineering
+    - data mesh
+    - data lake
+    - lakehouse
+    - data governance
+    - rest api
+    - cloud computing
+  relevance: <fill>
+  expected_required_years_min: null
+  expected_education_level: master
+  category: rich_skills
+
+
+- job_id: 162
+  title: Stage septembre 2026 - Data Science et Machine Learning/AI practitionner (H/F/N) (50% client, 50% R&D)
+  company: Ekimetrics
+  language: fr
+  expected_skills:
+    - python
+    - tensorflow
+    - pytorch
+    - scikit-learn
+    - langchain
+    - git
+    - etl
+    - machine learning
+    - deep learning
+    - data science
+    - statistics
+    - data visualization
+  relevance: <fill>
+  expected_required_years_min: null
+  expected_education_level: master
+  category: rich_skills
+  

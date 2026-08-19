@@ -2,11 +2,29 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any
 
 DEFAULT_DB_PATH = Path("jobscout.db")
+
+# A line comment runs to end of line, so a semicolon written inside one is not
+# a statement separator. Splitting first and discarding comment lines second
+# cut a statement in half at such a semicolon and handed sqlite the remainder:
+# a comment reading "...its score; what changes is..." produced
+# `near "what": syntax error`. Comments come out before the split now.
+_SQL_LINE_COMMENT_RE = re.compile(r"--[^\n]*")
+
+
+def split_statements(migration_sql: str) -> list[str]:
+    """Non-empty statements from a migration script, comments stripped first."""
+    without_comments = _SQL_LINE_COMMENT_RE.sub("", migration_sql)
+    return [
+        statement
+        for statement in (part.strip() for part in without_comments.split(";"))
+        if statement
+    ]
 
 SCHEMA_SQL = """
 -- Profiles derived from CVs. Multiple named profiles per install.
@@ -108,10 +126,7 @@ def migrate_m2(conn: sqlite3.Connection) -> None:
     if all(col in existing for col in m2_columns):
         return  # already migrated
 
-    for statement in MIGRATE_M2_SQL.strip().split(";"):
-        statement = statement.strip()
-        if not statement or statement.startswith("--"):
-            continue
+    for statement in split_statements(MIGRATE_M2_SQL):
         col_name = statement.split("ADD COLUMN")[1].strip().split()[0]
         if col_name not in existing:
             conn.execute(statement)
@@ -131,10 +146,7 @@ ALTER TABLE jobs ADD COLUMN domain_embedding  BLOB;
 
 def migrate_m3(conn: sqlite3.Connection) -> None:
     """Add M3 columns (embeddings + job extraction). Idempotent."""
-    for statement in MIGRATE_M3_SQL.strip().split(";"):
-        statement = statement.strip()
-        if not statement:
-            continue
+    for statement in split_statements(MIGRATE_M3_SQL):
         try:
             conn.execute(statement)
         except sqlite3.OperationalError as e:
@@ -172,6 +184,63 @@ def migrate_m6(conn: sqlite3.Connection) -> None:
     if "position_type" not in cols:
         conn.execute("ALTER TABLE jobs ADD COLUMN position_type TEXT")
         conn.commit()
+
+
+# M7b: Structured experience requirement, in years rather than buckets.
+MIGRATE_M7B_SQL = """
+ALTER TABLE jobs ADD COLUMN required_years_min REAL;
+ALTER TABLE jobs ADD COLUMN education_level    TEXT;
+ALTER TABLE jobs ADD COLUMN salary_yearly_min  INTEGER;
+ALTER TABLE jobs ADD COLUMN salary_currency    TEXT;
+ALTER TABLE jobs ADD COLUMN seniority_source   TEXT;
+-- candidate_years is the authoritative figure and is only ever set by hand.
+-- candidate_years_parsed is what CV date parsing suggested, kept for display.
+ALTER TABLE profiles ADD COLUMN candidate_years        REAL;
+ALTER TABLE profiles ADD COLUMN candidate_years_parsed REAL;
+"""
+
+
+def migrate_m7b(conn: sqlite3.Connection) -> None:
+    """Add M7b columns for years-based seniority. Idempotent, per column."""
+    _add_missing_columns(conn, MIGRATE_M7B_SQL)
+
+
+def _add_missing_columns(conn: sqlite3.Connection, migration_sql: str) -> None:
+    """Run the ALTER TABLE ... ADD COLUMN statements a table does not already have."""
+    existing: dict[str, set[str]] = {}
+    added = False
+
+    for statement in split_statements(migration_sql):
+        table = statement.split("ALTER TABLE")[1].strip().split()[0]
+        col_name = statement.split("ADD COLUMN")[1].strip().split()[0]
+        if table not in existing:
+            existing[table] = {
+                row[1]
+                for row in conn.execute(f"PRAGMA table_info({table})").fetchall()  # noqa: S608
+            }
+        if col_name not in existing[table]:
+            conn.execute(statement)
+            existing[table].add(col_name)
+            added = True
+
+    if added:
+        conn.commit()
+
+
+# M7d: where a description came from, and whether the posting still exists.
+MIGRATE_M7D_SQL = """
+-- 'detail' = the posting's own description endpoint, 'blurb' = the search
+-- index's requirements snippet, 'none' = neither yielded text.
+ALTER TABLE jobs ADD COLUMN description_source TEXT;
+-- Set when every attempt to reach the posting 404s. A delisted job keeps its
+-- row and its score. What changes is only that its link is known dead.
+ALTER TABLE jobs ADD COLUMN delisted_at TEXT;
+"""
+
+
+def migrate_m7d(conn: sqlite3.Connection) -> None:
+    """Add M7d columns for description provenance. Idempotent, per column."""
+    _add_missing_columns(conn, MIGRATE_M7D_SQL)
 
 
 def find_by_dedup_hash(conn: sqlite3.Connection, dedup_hash: str) -> sqlite3.Row | None:
@@ -248,34 +317,49 @@ def table_counts(conn: sqlite3.Connection) -> dict[str, int]:
         for t in tables
     }
 
+# Written on every upsert. candidate_years is deliberately not here: a
+# hand-set override must survive re-ingesting the CV.
+PROFILE_UPSERT_COLUMNS: tuple[str, ...] = (
+    "raw_text", "skills", "domains", "seniority", "languages",
+    "target_locations", "company_types", "position_types",
+    "candidate_years_parsed",
+)
+
+PROFILE_JSON_COLUMNS: tuple[str, ...] = (
+    "skills", "domains", "languages", "target_locations",
+    "company_types", "position_types",
+)
+
+
 def upsert_profile(conn: sqlite3.Connection, profile: dict[str, Any]) -> int:
-    """Insert or update a profile by name. Returns the profile id."""
+    """Insert or update a profile by name. Returns the profile id.
+
+    The column list is intersected with what the table actually has, so a
+    database that has not run every migration yet still writes what it can.
+    """
     import json
 
-    sql = """
-        INSERT INTO profiles (name, raw_text, skills, domains, seniority,
-                              languages, target_locations, company_types,
-                              position_types, updated_at)
-        VALUES (:name, :raw_text, :skills, :domains, :seniority,
-                :languages, :target_locations, :company_types,
-                :position_types, datetime('now'))
-        ON CONFLICT(name) DO UPDATE SET
-            raw_text = excluded.raw_text,
-            skills = excluded.skills,
-            domains = excluded.domains,
-            seniority = excluded.seniority,
-            languages = excluded.languages,
-            target_locations = excluded.target_locations,
-            company_types = excluded.company_types,
-            position_types = excluded.position_types,
-            updated_at = datetime('now')
-    """
-    # Serialize lists to JSON strings
-    params = dict(profile)
-    for key in ("skills", "domains", "languages", "target_locations",
-                "company_types", "position_types"):
-        if isinstance(params.get(key), list):
-            params[key] = json.dumps(params[key])
+    available = {
+        row[1] for row in conn.execute("PRAGMA table_info(profiles)").fetchall()
+    }
+    cols = [c for c in PROFILE_UPSERT_COLUMNS if c in available]
+
+    insert_cols = ", ".join(["name", *cols, "updated_at"])
+    insert_vals = ", ".join([":name", *(f":{c}" for c in cols), "datetime('now')"])
+    update_set = ", ".join(
+        [*(f"{c} = excluded.{c}" for c in cols), "updated_at = datetime('now')"]
+    )
+    sql = (  # noqa: S608 — column names come from the module constant above
+        f"INSERT INTO profiles ({insert_cols}) VALUES ({insert_vals}) "
+        f"ON CONFLICT(name) DO UPDATE SET {update_set}"
+    )
+
+    params = {"name": profile["name"]}
+    for col in cols:
+        value = profile.get(col)
+        if col in PROFILE_JSON_COLUMNS and isinstance(value, list):
+            value = json.dumps(value)
+        params[col] = value
 
     cur = conn.execute(sql, params)
     conn.commit()

@@ -153,10 +153,12 @@ def _resolve_nested(data: dict, key: str) -> Any:
 
 
 def _strip_html(text: str) -> str:
-    """Naive HTML tag stripping — good enough for feed descriptions."""
-    import re
-    # Remove tags
-    clean = re.sub(r"<[^>]+>", " ", text)
-    # Collapse whitespace
-    clean = re.sub(r"\s+", " ", clean)
-    return clean.strip()
+    """Strip markup from a feed description, preserving block structure.
+
+    Delegates to the shared cleaner. The previous regex flattened everything
+    to a single line, which destroyed the structure that lets a truncated
+    description keep its requirements section.
+    """
+    from jobscout.textclean import clean_description
+
+    return clean_description(text)

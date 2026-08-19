@@ -16,7 +16,8 @@ from fastapi.templating import Jinja2Templates
 from jobscout.config import load_config
 from jobscout.db import (
     get_connection, init_db,
-    migrate_m2, migrate_m3, migrate_m4, migrate_m5, migrate_m6,
+    migrate_m2, migrate_m3, migrate_m4, migrate_m5, migrate_m6, migrate_m7b,
+    migrate_m7d,
     get_profile, upsert_profile,
 )
 from jobscout.profiles import extract_text, RuleBasedExtractor
@@ -60,6 +61,8 @@ def _startup():
     migrate_m4(conn)
     migrate_m5(conn)
     migrate_m6(conn)
+    migrate_m7b(conn)
+    migrate_m7d(conn)
 
     # Clean up fixture/dummy data
     deleted = conn.execute(
@@ -127,7 +130,8 @@ async def upload_cv(
         tmp_path = Path(tmp.name)
 
     try:
-        raw_text = extract_text(tmp_path)
+        x_tolerance = load_config().get("extraction", {}).get("pdf_x_tolerance")
+        raw_text = extract_text(tmp_path, x_tolerance=x_tolerance)
         if not raw_text.strip():
             return HTMLResponse(
                 '<article class="error">No text could be extracted from the file.</article>',
@@ -232,17 +236,25 @@ def list_jobs(
     location: str = "",
     org_type: str = "",
     position_type: str = "",
+    show_stretch: bool = False,
+    show_delisted: bool = False,
     db=Depends(_get_db),
 ):
     """Return the jobs table partial, with optional filters."""
-    query = """
-        SELECT j.*, m.score, m.facet_scores, m.explanation, m.status AS match_status
+    # The seniority gate marks stretch roles rather than deleting them, so the
+    # count of what is being hidden is always available to show the user.
+    stretch_expr = (
+        "COALESCE(json_extract(m.facet_scores, '$._seniority.filtered'), 0)"
+    )
+    query = f"""
+        SELECT j.*, m.score, m.facet_scores, m.explanation, m.status AS match_status,
+               {stretch_expr} AS is_stretch
         FROM jobs j
         JOIN matches m ON m.job_id = j.id
         JOIN profiles p ON p.id = m.profile_id
         WHERE p.name = ?
           AND m.score >= ?
-    """
+    """  # noqa: S608 — stretch_expr is a fixed literal, not user input
     params: list = [profile, min_score]
 
     if source:
@@ -260,7 +272,17 @@ def list_jobs(
 
     query += " ORDER BY m.score DESC"
 
-    jobs = db.execute(query, params).fetchall()
+    all_jobs = db.execute(query, params).fetchall()
+    stretch_count = sum(1 for j in all_jobs if j["is_stretch"])
+    delisted_count = sum(1 for j in all_jobs if j["delisted_at"])
+
+    jobs = all_jobs
+    if not show_stretch:
+        jobs = [j for j in jobs if not j["is_stretch"]]
+    if not show_delisted:
+        # A posting that 404s cannot be applied to. It keeps its row and its
+        # score, but it does not belong in the default list.
+        jobs = [j for j in jobs if not j["delisted_at"]]
 
     sources = db.execute(
         "SELECT DISTINCT source FROM jobs ORDER BY source"
@@ -276,12 +298,18 @@ def list_jobs(
             "jobs": jobs,
             "sources": [r["source"] for r in sources],
             "locations": [r["location"] for r in locations],
+            "stretch_count": stretch_count,
+            "show_stretch": show_stretch,
+            "delisted_count": delisted_count,
+            "show_delisted": show_delisted,
             "current_filters": {
                 "min_score": min_score,
                 "source": source,
                 "location": location,
                 "org_type": org_type,
                 "position_type": position_type,
+                "show_stretch": show_stretch,
+                "show_delisted": show_delisted,
             },
         },
     )
@@ -306,12 +334,17 @@ def job_detail(request: Request, job_id: int, db=Depends(_get_db)):
         facet_scores = json.loads(match["facet_scores"] or "{}")
         matched_skills = json.loads(match["explanation"] or "[]")
 
+    # Underscore keys are detail payloads, not 0-1 facet bars.
+    seniority_detail = facet_scores.pop("_seniority", None)
+
     return templates.TemplateResponse(
         request, "partials/_job_detail.html",
         {
             "job": job,
             "match": match,
-            "facet_scores": facet_scores,
+            "facet_scores": {k: v for k, v in facet_scores.items()
+                             if not k.startswith("_")},
+            "seniority_detail": seniority_detail,
             "matched_skills": matched_skills,
         },
     )
@@ -389,9 +422,25 @@ def _run_pipeline(run_id: int, config: dict, org_types: list[str] | None = None)
         _update_run(conn, run_id, progress=0.5,
                      message="Scoring jobs against profile (loading model, this may take a moment)...")
 
-        from jobscout.matching import run_matching
-        weights = config.get("scoring", {}).get("weights")
-        results = run_matching(conn, "default", weights=weights, org_types=org_types)
+        from jobscout.matching import (
+            DEFAULT_FILTER_ON_INFERRED, DEFAULT_GATE_YEARS, run_matching,
+        )
+        from jobscout.profiles import resolve_candidate_years
+
+        scoring = config.get("scoring", {})
+        weights = scoring.get("weights")
+        seniority_cfg = scoring.get("seniority") or {}
+        gate = seniority_cfg.get("gate_years", DEFAULT_GATE_YEARS)
+        filter_on_inferred = seniority_cfg.get(
+            "filter_on_inferred", DEFAULT_FILTER_ON_INFERRED,
+        )
+        candidate_years, _ = resolve_candidate_years(get_profile(conn, "default"), config)
+
+        results = run_matching(
+            conn, "default", weights=weights, org_types=org_types,
+            candidate_years=candidate_years, gate_years=gate,
+            filter_on_inferred=filter_on_inferred,
+        )
 
         conn.execute(
             "UPDATE runs SET status = 'completed', progress = 1.0, "
